@@ -1,9 +1,8 @@
+// MinimumCostUI.java
 package com.nibm.ui;
-
-import java.util.Scanner;
-
+import javax.swing.JFrame;
 public class MinimumCostUI {
-    public void start(Scanner scanner) {
-        System.out.println("Minimum Cost Game Started...");
+    public MinimumCostUI(JFrame parent) {
+        // TODO: implement Game 1
     }
 }

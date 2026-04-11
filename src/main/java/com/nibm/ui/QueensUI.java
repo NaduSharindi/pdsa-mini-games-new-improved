@@ -1,9 +1,8 @@
+// QueensUI.java
 package com.nibm.ui;
-
-import java.util.Scanner;
-
+import javax.swing.JFrame;
 public class QueensUI {
-    public void start(Scanner scanner) {
-        System.out.println("Minimum Cost Game Started...");
+    public QueensUI(JFrame parent) {
+        // TODO: implement Game 2
     }
 }

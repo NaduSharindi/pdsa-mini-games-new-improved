@@ -1,9 +1,8 @@
+// TrafficUI.java
 package com.nibm.ui;
-
-import java.util.Scanner;
-
+import javax.swing.JFrame;
 public class TrafficUI {
-    public void start(Scanner scanner) {
-        System.out.println("Minimum Cost Game Started...");
+    public TrafficUI(JFrame parent) {
+        // TODO: implement Game 1
     }
 }
