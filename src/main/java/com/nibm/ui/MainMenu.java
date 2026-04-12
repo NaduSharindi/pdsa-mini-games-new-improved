@@ -40,7 +40,7 @@ public class MainMenu extends JFrame {
 
     // ── Constructor ───────────────────────────────────────────
     public MainMenu() {
-        setTitle("PDSA Game Suite — NIBM BSc 25.2");
+        setTitle("PDSA Game Suite — COBSCCOMP242P-063");
         setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         setResizable(false);
 
@@ -81,7 +81,7 @@ public class MainMenu extends JFrame {
         title.setForeground(CLR_HEADER_TEXT);
         title.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel sub = new JLabel("Problem Solving & Algorithm Design — Batch 25.2");
+        JLabel sub = new JLabel("Problem Solving & Algorithm Design — COBSCCOMP242P-063");
         sub.setFont(new Font("SansSerif", Font.PLAIN, 12));
         sub.setForeground(CLR_HEADER_SUB);
         sub.setAlignmentX(Component.LEFT_ALIGNMENT);
