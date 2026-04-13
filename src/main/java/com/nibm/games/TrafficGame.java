@@ -22,11 +22,10 @@ public class TrafficGame {
 
     // ── Start new round ───────────────────────────────────────
     public TrafficRound newRound(int roundNumber) {
-        // Build capacity matrix with random values 5–15
         int[][] capacity = buildCapacityMatrix();
         this.network = new TrafficNetwork(capacity);
 
-        // Run Ford-Fulkerson — timed
+        // ── Run Ford-Fulkerson — timed ────────────────────────
         FordFulkerson ff = new FordFulkerson();
         long ffStart = System.currentTimeMillis();
         ff.solve(deepCopy(capacity),
@@ -34,7 +33,7 @@ public class TrafficGame {
         ffTimeMs      = System.currentTimeMillis() - ffStart;
         correctAnswer = ff.getMaxFlow();
 
-        // Run Edmonds-Karp — timed
+        // ── Run Edmonds-Karp — timed ──────────────────────────
         EdmondsKarp ek = new EdmondsKarp();
         long ekStart = System.currentTimeMillis();
         ek.solve(deepCopy(capacity),
@@ -42,7 +41,7 @@ public class TrafficGame {
         ekTimeMs = System.currentTimeMillis() - ekStart;
         ekAnswer = ek.getMaxFlow();
 
-        // Build round model
+        // ── Build round model ─────────────────────────────────
         TrafficRound round = new TrafficRound();
         round.setRoundNumber(roundNumber);
         round.setCapacities(capacity);
@@ -53,44 +52,27 @@ public class TrafficGame {
         return round;
     }
 
-    // ── Build capacity matrix ─────────────────────────────────
+    // ── Build capacity matrix with random values 5–15 ─────────
     private int[][] buildCapacityMatrix() {
-        int n = TrafficNetwork.NODE_COUNT;
+        int n   = TrafficNetwork.NODE_COUNT;
         int[][] cap = new int[n][n];
-
-        // Set random capacity for each defined edge
         for (int[] edge : TrafficNetwork.EDGES) {
-            int from = edge[0];
-            int to   = edge[1];
-            cap[from][to] = MIN_CAP +
-                    random.nextInt(MAX_CAP - MIN_CAP + 1);
+            cap[edge[0]][edge[1]] =
+                    MIN_CAP + random.nextInt(MAX_CAP - MIN_CAP + 1);
         }
         return cap;
     }
 
-    // ── Generate 3 choices ────────────────────────────────────
-    public int[] generateChoices() {
-        int correct = correctAnswer;
-        int wrong1, wrong2;
-
-        do { wrong1 = correct + random.nextInt(10) + 1; }
-        while (wrong1 == correct);
-
-        do { wrong2 = Math.max(1, correct - random.nextInt(10) - 1); }
-        while (wrong2 == correct || wrong2 == wrong1);
-
-        int[] choices = {correct, wrong1, wrong2};
-        // Shuffle
-        for (int i = 2; i > 0; i--) {
-            int j = random.nextInt(i + 1);
-            int tmp = choices[i];
-            choices[i] = choices[j];
-            choices[j] = tmp;
-        }
-        return choices;
+    // ── Classify player answer: WIN / DRAW / LOSE ─────────────
+    // WIN  = exact correct answer
+    // DRAW = within ±2 of correct (close guess)
+    // LOSE = more than ±2 away
+    public String classifyAnswer(int playerAnswer) {
+        if (playerAnswer == correctAnswer)                       return "WIN";
+        if (Math.abs(playerAnswer - correctAnswer) <= 2)        return "DRAW";
+        return "LOSE";
     }
 
-    // ── Validate answer ───────────────────────────────────────
     public boolean validateAnswer(int playerAnswer) {
         return playerAnswer == correctAnswer;
     }
@@ -102,11 +84,11 @@ public class TrafficGame {
     public long getFfTimeMs()            { return ffTimeMs; }
     public long getEkTimeMs()            { return ekTimeMs; }
 
-    // ── Deep copy helper ──────────────────────────────────────
+    // ── Fixed deepCopy ────────────────────────────────────────
     private int[][] deepCopy(int[][] src) {
-        int[][] copy = new int[src.length][src.length];
+        int[][] copy = new int[src.length][];
         for (int i = 0; i < src.length; i++) {
-            copy[i] = src[i].clone();
+            copy[i] = src[i].clone();  // clone each row individually
         }
         return copy;
     }
