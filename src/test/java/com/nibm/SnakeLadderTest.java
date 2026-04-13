@@ -8,37 +8,60 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class SnakeLadderTest {
 
-    // ── BFS: simple known board ───────────────────────────────
+    // ── BFS: plain board no snakes/ladders ────────────────────
     @Test
-    public void testBFSSimpleBoard() {
-        // 6x6 board, no snakes or ladders
+    public void testBFSPlainBoard() {
         int total = 36;
         int[] board = new int[total + 1];
         for (int i = 1; i <= total; i++) board[i] = i;
-
         BFSSnakeLadder bfs = new BFSSnakeLadder();
         bfs.solve(board, total);
-        // Min throws on plain board >= 6 (ceil(35/6))
         assertTrue(bfs.getMinThrows() >= 6,
-                "Min throws on plain board should be >= 6");
+                "Plain 6x6 board needs at least 6 throws");
     }
 
-    // ── BFS: null board throws exception ──────────────────────
+    // ── BFS: ladder shortcut reduces throws ───────────────────
+    @Test
+    public void testBFSLadderHelps() {
+        int total = 36;
+        int[] plain = new int[total + 1];
+        int[] withLadder = new int[total + 1];
+        for (int i = 1; i <= total; i++) {
+            plain[i] = i;
+            withLadder[i] = i;
+        }
+        withLadder[2] = 30; // big ladder from cell 2
+
+        BFSSnakeLadder bfsPlain   = new BFSSnakeLadder();
+        BFSSnakeLadder bfsLadder  = new BFSSnakeLadder();
+        bfsPlain.solve(plain, total);
+        bfsLadder.solve(withLadder, total);
+
+        assertTrue(bfsLadder.getMinThrows() <= bfsPlain.getMinThrows(),
+                "Ladder should reduce or equal minimum throws");
+    }
+
+    // ── BFS: null throws ─────────────────────────────────────
     @Test
     public void testBFSNullThrows() {
-        BFSSnakeLadder bfs = new BFSSnakeLadder();
         assertThrows(IllegalArgumentException.class,
-                () -> bfs.solve(null, 36));
+                () -> new BFSSnakeLadder().solve(null, 36));
     }
 
-    // ── Dijkstra: matches BFS on same board ───────────────────
+    // ── BFS: zero totalCells throws ───────────────────────────
+    @Test
+    public void testBFSZeroCellsThrows() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new BFSSnakeLadder().solve(new int[1], 0));
+    }
+
+    // ── Dijkstra: matches BFS ─────────────────────────────────
     @Test
     public void testDijkstraMatchesBFS() {
         int total = 36;
         int[] board = new int[total + 1];
         for (int i = 1; i <= total; i++) board[i] = i;
-        // Add one ladder: cell 5 -> cell 20
-        board[5] = 20;
+        board[4] = 20; // ladder
 
         BFSSnakeLadder bfs = new BFSSnakeLadder();
         bfs.solve(board, total);
@@ -47,81 +70,170 @@ public class SnakeLadderTest {
         dijk.solve(board, total);
 
         assertEquals(bfs.getMinThrows(), dijk.getMinThrows(),
-                "BFS and Dijkstra must give same answer on same board");
+                "BFS and Dijkstra must agree on same board");
     }
 
-    // ── Dijkstra: null board throws exception ─────────────────
+    // ── Dijkstra: null throws ─────────────────────────────────
     @Test
     public void testDijkstraNullThrows() {
-        DijkstraSnakeLadder d = new DijkstraSnakeLadder();
         assertThrows(IllegalArgumentException.class,
-                () -> d.solve(null, 36));
+                () -> new DijkstraSnakeLadder().solve(null, 36));
     }
 
-    // ── Game: N stays in valid range ──────────────────────────
+    // ── Game: N below range throws ────────────────────────────
     @Test
-    public void testNOutOfRangeThrows() {
-        SnakeLadderGame game = new SnakeLadderGame();
+    public void testNBelowRangeThrows() {
         assertThrows(IllegalArgumentException.class,
-                () -> game.newRound(1, 5));   // too small
-        assertThrows(IllegalArgumentException.class,
-                () -> game.newRound(1, 13));  // too large
+                () -> new SnakeLadderGame().newRound(1, 5));
     }
 
-    // ── Game: snake and ladder counts correct ─────────────────
+    // ── Game: N above range throws ────────────────────────────
     @Test
-    public void testSnakeLadderCounts() {
+    public void testNAboveRangeThrows() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new SnakeLadderGame().newRound(1, 13));
+    }
+
+    // ── Game: snake count = N-2 for all valid N ───────────────
+    @Test
+    public void testSnakeCount() {
         SnakeLadderGame game = new SnakeLadderGame();
         for (int n = 6; n <= 12; n++) {
             game.newRound(1, n);
             assertEquals(n - 2, game.getSnakes().length,
                     "Snake count must be N-2 for N=" + n);
+        }
+    }
+
+    // ── Game: ladder count = N-2 for all valid N ──────────────
+    @Test
+    public void testLadderCount() {
+        SnakeLadderGame game = new SnakeLadderGame();
+        for (int n = 6; n <= 12; n++) {
+            game.newRound(1, n);
             assertEquals(n - 2, game.getLadders().length,
                     "Ladder count must be N-2 for N=" + n);
         }
     }
 
-    // ── Game: correct answer is positive ─────────────────────
+    // ── Game: ladder base < top ───────────────────────────────
     @Test
-    public void testAnswerIsPositive() {
+    public void testLadderGoesUp() {
         SnakeLadderGame game = new SnakeLadderGame();
         game.newRound(1, 8);
-        assertTrue(game.getCorrectAnswer() > 0,
-                "Min throws must be positive");
+        for (int[] l : game.getLadders()) {
+            assertTrue(l[0] < l[1],
+                    "Ladder base must be < top. Got: "
+                            + l[0] + " -> " + l[1]);
+        }
     }
 
-    // ── Game: 3 choices generated correctly ──────────────────
+    // ── Game: snake head > tail ───────────────────────────────
+    @Test
+    public void testSnakeGoesDown() {
+        SnakeLadderGame game = new SnakeLadderGame();
+        game.newRound(1, 8);
+        for (int[] s : game.getSnakes()) {
+            assertTrue(s[0] > s[1],
+                    "Snake head must be > tail. Got: "
+                            + s[0] + " -> " + s[1]);
+        }
+    }
+
+    // ── Game: no cell 1 or N² used by snake/ladder ────────────
+    @Test
+    public void testNoCellOneOrLastUsed() {
+        SnakeLadderGame game = new SnakeLadderGame();
+        game.newRound(1, 8);
+        int last = 64;
+        for (int[] s : game.getSnakes()) {
+            assertNotEquals(1,    s[0], "Snake head at cell 1");
+            assertNotEquals(1,    s[1], "Snake tail at cell 1");
+            assertNotEquals(last, s[0], "Snake head at last cell");
+            assertNotEquals(last, s[1], "Snake tail at last cell");
+        }
+        for (int[] l : game.getLadders()) {
+            assertNotEquals(1,    l[0], "Ladder base at cell 1");
+            assertNotEquals(1,    l[1], "Ladder top at cell 1");
+            assertNotEquals(last, l[0], "Ladder base at last cell");
+            assertNotEquals(last, l[1], "Ladder top at last cell");
+        }
+    }
+
+    // ── Game: 3 choices generated, all positive, all distinct ─
+    @Test
+    public void testChoicesPositiveAndDistinct() {
+        SnakeLadderGame game = new SnakeLadderGame();
+        game.newRound(1, 8);
+        int[] choices = game.generateChoices();
+        assertEquals(3, choices.length);
+        // All positive
+        for (int c : choices) assertTrue(c > 0, "Choice must be > 0: " + c);
+        // All distinct
+        assertNotEquals(choices[0], choices[1]);
+        assertNotEquals(choices[1], choices[2]);
+        assertNotEquals(choices[0], choices[2]);
+    }
+
+    // ── Game: choices contain correct answer ──────────────────
     @Test
     public void testChoicesContainCorrect() {
         SnakeLadderGame game = new SnakeLadderGame();
         game.newRound(1, 8);
         int[] choices = game.generateChoices();
-        assertEquals(3, choices.length);
-
         boolean found = false;
         for (int c : choices) {
             if (c == game.getCorrectAnswer()) { found = true; break; }
         }
-        assertTrue(found, "Choices must contain the correct answer");
+        assertTrue(found, "Choices must include correct answer");
     }
 
-    // ── Game: validate answer ─────────────────────────────────
+    // ── Game: WIN classification ──────────────────────────────
     @Test
-    public void testValidateAnswer() {
+    public void testClassifyWin() {
         SnakeLadderGame game = new SnakeLadderGame();
         game.newRound(1, 8);
-        assertTrue(game.validateAnswer(game.getCorrectAnswer()));
-        assertFalse(game.validateAnswer(-1));
+        assertEquals("WIN", game.classifyAnswer(game.getCorrectAnswer()));
     }
 
-    // ── Game: BFS == Dijkstra on generated board ──────────────
+    // ── Game: DRAW classification (±1) ───────────────────────
     @Test
-    public void testBFSEqualsDijkstraOnGame() {
+    public void testClassifyDraw() {
+        SnakeLadderGame game = new SnakeLadderGame();
+        game.newRound(1, 8);
+        int correct = game.getCorrectAnswer();
+        assertEquals("DRAW", game.classifyAnswer(correct + 1));
+        if (correct > 1) {
+            assertEquals("DRAW", game.classifyAnswer(correct - 1));
+        }
+    }
+
+    // ── Game: LOSE classification ─────────────────────────────
+    @Test
+    public void testClassifyLose() {
+        SnakeLadderGame game = new SnakeLadderGame();
+        game.newRound(1, 8);
+        assertEquals("LOSE", game.classifyAnswer(
+                game.getCorrectAnswer() + 10));
+    }
+
+    // ── Game: min throws is always positive ───────────────────
+    @Test
+    public void testMinThrowsPositive() {
+        SnakeLadderGame game = new SnakeLadderGame();
+        game.newRound(1, 8);
+        assertTrue(game.getCorrectAnswer() > 0);
+    }
+
+    // ── Game: BFS == Dijkstra on game board ───────────────────
+    @Test
+    public void testBFSEqualsDijkstraOnGameBoard() {
         SnakeLadderGame game = new SnakeLadderGame();
         for (int i = 1; i <= 5; i++) {
             game.newRound(i, 8);
-            assertEquals(game.getCorrectAnswer(), game.getDijkstraAnswer(),
-                    "BFS and Dijkstra answers must match. Round " + i);
+            assertEquals(game.getCorrectAnswer(),
+                    game.getDijkstraAnswer(),
+                    "BFS and Dijkstra must match. Round " + i);
         }
     }
 }
