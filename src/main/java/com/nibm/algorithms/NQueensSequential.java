@@ -5,22 +5,22 @@ import java.util.List;
 
 public class NQueensSequential {
 
-    private static final int BOARD_SIZE = 16;
+    private static final int BOARD_SIZE = 8;
     private List<int[]> solutions;  // each int[] = col positions per row
     private long timeTakenMs;
 
     /**
-     * Finds ALL solutions to the 16-Queens problem.
+     * Finds ALL solutions to the 8-Queens problem.
      * Uses backtracking — single threaded.
-     * Time complexity: O(16!) worst case, pruned heavily.
+     * Time complexity: O(8!) worst case, pruned heavily.
      */
     public void solve() {
         solutions    = new ArrayList<>();
         int[] board  = new int[BOARD_SIZE]; // board[row] = col of queen
 
-        long start   = System.currentTimeMillis();
+        long start  = System.nanoTime();
         backtrack(board, 0);
-        timeTakenMs  = System.currentTimeMillis() - start;
+        timeTakenMs = System.nanoTime() - start;
     }
 
     private void backtrack(int[] board, int row) {

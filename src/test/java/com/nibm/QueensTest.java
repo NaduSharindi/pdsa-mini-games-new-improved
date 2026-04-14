@@ -19,11 +19,11 @@ public class QueensTest {
                 "Sequential must find at least one solution");
     }
 
-    // ── Sequential: board size = 16 ──────────────────────────
+    // ── Sequential: board size = 8 ──────────────────────────
     @Test
     public void testSequentialBoardSize() {
         NQueensSequential seq = new NQueensSequential();
-        assertEquals(16, seq.getBoardSize());
+        assertEquals(8, seq.getBoardSize());
     }
 
     // ── Sequential: timing is non-negative ───────────────────
@@ -34,14 +34,14 @@ public class QueensTest {
         assertTrue(seq.getTimeTakenMs() >= 0);
     }
 
-    // ── Sequential: each solution has 16 queens ───────────────
+    // ── Sequential: each solution has 8 queens ───────────────
     @Test
     public void testSequentialSolutionLength() {
         NQueensSequential seq = new NQueensSequential();
         seq.solve();
         for (int[] sol : seq.getSolutions()) {
-            assertEquals(16, sol.length,
-                    "Each solution must have 16 positions");
+            assertEquals(8, sol.length,
+                    "Each solution must have 8 positions");
         }
     }
 
@@ -104,7 +104,7 @@ public class QueensTest {
     public void testValidatorAcceptsKnownGoodSolution() {
         QueensPuzzleGame game = new QueensPuzzleGame(null);
 
-        // Get a real 16-queen solution from sequential solver
+        // Get a real 8-queen solution from sequential solver
         NQueensSequential seq = new NQueensSequential();
         seq.solve();
         assertTrue(seq.getTotalSolutions() > 0);
@@ -132,7 +132,7 @@ public class QueensTest {
     @Test
     public void testValidatorRejectsSameColumn() {
         QueensPuzzleGame game = new QueensPuzzleGame(null);
-        int[] allSameCol = new int[16]; // all 0 → same column
+        int[] allSameCol = new int[8]; // all 0 → same column
         assertFalse(game.isValidQueenPlacement(allSameCol));
     }
 
@@ -141,10 +141,10 @@ public class QueensTest {
     public void testValidatorRejectsDiagonalConflict() {
         QueensPuzzleGame game = new QueensPuzzleGame(null);
         // Queens at (0,0) and (1,1) are on same diagonal
-        int[] diagonal = new int[16];
+        int[] diagonal = new int[8];
         diagonal[0] = 0;
         diagonal[1] = 1; // diagonal conflict with row 0
-        for (int i = 2; i < 16; i++) diagonal[i] = i + 1;
+        for (int i = 2; i < 8; i++) diagonal[i] = i + 1;
         assertFalse(game.isValidQueenPlacement(diagonal));
     }
 
@@ -152,7 +152,7 @@ public class QueensTest {
     @Test
     public void testValidatorRejectsOutOfBoundsCol() {
         QueensPuzzleGame game = new QueensPuzzleGame(null);
-        int[] bad = new int[16];
+        int[] bad = new int[8];
         bad[0] = 99; // col 99 is out of bounds
         assertFalse(game.isValidQueenPlacement(bad));
     }

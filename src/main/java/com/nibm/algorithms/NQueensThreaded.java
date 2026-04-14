@@ -10,8 +10,8 @@ import java.util.concurrent.Future;
 
 public class NQueensThreaded {
 
-    private static final int BOARD_SIZE   = 16;
-    private static final int THREAD_COUNT = 16; // one thread per first-col
+    private static final int BOARD_SIZE   = 8;
+    private static final int THREAD_COUNT = 8; // one thread per first-col
 
     private List<int[]> solutions;
     private long timeTakenMs;
@@ -32,7 +32,7 @@ public class NQueensThreaded {
                 Executors.newFixedThreadPool(THREAD_COUNT);
         List<Future<List<int[]>>> futures = new ArrayList<>();
 
-        long start = System.currentTimeMillis();
+        long start  = System.nanoTime();
 
         // Submit one task per starting column in row 0
         for (int startCol = 0; startCol < BOARD_SIZE; startCol++) {
@@ -57,7 +57,7 @@ public class NQueensThreaded {
         }
 
         executor.shutdown();
-        timeTakenMs = System.currentTimeMillis() - start;
+        timeTakenMs = System.nanoTime() - start;
         solutions   = new ArrayList<>(combined);
     }
 

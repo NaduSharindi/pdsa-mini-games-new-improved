@@ -6,12 +6,6 @@ public class FordFulkerson {
     private int[][] residual;
     private int n;
 
-    /**
-     * Solves max flow using DFS-based augmenting paths.
-     * @param capacity  n×n adjacency matrix (capacity[i][j] = capacity of edge i->j)
-     * @param source    source node index
-     * @param sink      sink node index
-     */
     public void solve(int[][] capacity, int source, int sink) {
         if (capacity == null || capacity.length == 0) {
             throw new IllegalArgumentException(
@@ -24,8 +18,6 @@ public class FordFulkerson {
         }
 
         this.n = capacity.length;
-
-        // Build residual graph as deep copy
         residual = new int[n][n];
         for (int i = 0; i < n; i++) {
             residual[i] = capacity[i].clone();
@@ -33,16 +25,14 @@ public class FordFulkerson {
 
         maxFlow = 0;
 
-        // Augment while DFS finds a path from source to sink
         while (true) {
             boolean[] visited = new boolean[n];
             int pathFlow = dfs(source, sink, Integer.MAX_VALUE, visited);
-            if (pathFlow == 0) break;   // no augmenting path found
+            if (pathFlow == 0) break;
             maxFlow += pathFlow;
         }
     }
 
-    // DFS to find augmenting path — returns bottleneck flow
     private int dfs(int node, int sink, int flow, boolean[] visited) {
         if (node == sink) return flow;
         visited[node] = true;
@@ -52,7 +42,6 @@ public class FordFulkerson {
                 int pushed = dfs(next, sink,
                         Math.min(flow, residual[node][next]), visited);
                 if (pushed > 0) {
-                    // Update residual capacities
                     residual[node][next] -= pushed;
                     residual[next][node] += pushed;
                     return pushed;
@@ -62,5 +51,7 @@ public class FordFulkerson {
         return 0;
     }
 
-    public int getMaxFlow() { return maxFlow; }
+    public int getMaxFlow() {
+        return maxFlow;
+    }
 }

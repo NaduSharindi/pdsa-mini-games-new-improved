@@ -10,7 +10,7 @@ import java.util.List;
 
 public class QueensPuzzleGame {
 
-    public static final int BOARD_SIZE = 16;
+    public static final int BOARD_SIZE = 8;
 
     private final QueensSolutionRepository repo;
 
@@ -119,7 +119,7 @@ public class QueensPuzzleGame {
         return "INVALID";
     }
 
-    // ── Validate: all 16 queens placed, no threats ────────────
+    // ── Validate: all 8 queens placed, no threats ────────────
     public boolean isValidQueenPlacement(int[] positions) {
         if (positions == null || positions.length != BOARD_SIZE) {
             return false;

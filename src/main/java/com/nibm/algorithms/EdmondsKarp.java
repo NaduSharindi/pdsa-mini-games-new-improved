@@ -1,5 +1,6 @@
 package com.nibm.algorithms;
 
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Queue;
 
@@ -7,10 +8,6 @@ public class EdmondsKarp {
 
     private int maxFlow;
 
-    /**
-     * Solves max flow using BFS-based augmenting paths (Edmonds-Karp).
-     * Guaranteed O(V * E²) — always finds shortest augmenting path.
-     */
     public void solve(int[][] capacity, int source, int sink) {
         if (capacity == null || capacity.length == 0) {
             throw new IllegalArgumentException(
@@ -24,8 +21,6 @@ public class EdmondsKarp {
 
         int n = capacity.length;
         int[][] residual = new int[n][n];
-
-        // Build residual graph
         for (int i = 0; i < n; i++) {
             residual[i] = capacity[i].clone();
         }
@@ -33,9 +28,8 @@ public class EdmondsKarp {
         maxFlow = 0;
 
         while (true) {
-            // BFS to find shortest augmenting path
             int[] parent = new int[n];
-            java.util.Arrays.fill(parent, -1);
+            Arrays.fill(parent, -1);
             parent[source] = source;
 
             Queue<Integer> queue = new LinkedList<>();
@@ -51,17 +45,14 @@ public class EdmondsKarp {
                 }
             }
 
-            // No augmenting path found
             if (parent[sink] == -1) break;
 
-            // Find bottleneck along the path
             int pathFlow = Integer.MAX_VALUE;
             for (int v = sink; v != source; v = parent[v]) {
                 int u = parent[v];
                 pathFlow = Math.min(pathFlow, residual[u][v]);
             }
 
-            // Update residual capacities along the path
             for (int v = sink; v != source; v = parent[v]) {
                 int u = parent[v];
                 residual[u][v] -= pathFlow;
@@ -72,5 +63,7 @@ public class EdmondsKarp {
         }
     }
 
-    public int getMaxFlow() { return maxFlow; }
+    public int getMaxFlow() {
+        return maxFlow;
+    }
 }

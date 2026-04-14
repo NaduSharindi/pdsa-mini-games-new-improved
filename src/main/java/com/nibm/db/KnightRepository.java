@@ -36,8 +36,8 @@ public class KnightRepository {
                     .append("startCol",          round.getStartCol())
                     .append("warnsdorffSolved",  round.isWarnsdorffSolved())
                     .append("backtrackSolved",   round.isBacktrackSolved())
-                    .append("warnsdorffTimeMs",  round.getWarnsdorffTimeMs())
-                    .append("backtrackTimeMs",   round.getBacktrackTimeMs())
+                    .append("warnsdorffTimeNs",  round.getWarnsdorffTimeMs())
+                    .append("backtrackTimeNs",   round.getBacktrackTimeMs())
                     .append("warnsdorffTour",    movesToDocs(wMoves))
                     .append("backtrackTour",     movesToDocs(bMoves))
                     .append("timestamp",         new Date());
@@ -87,13 +87,13 @@ public class KnightRepository {
     }
 
     private void saveTimingRecord(int roundNumber,
-                                  String algorithm, long timeMs) {
+                                  String algorithm, long timeNs) {
         try {
             Document doc = new Document()
                     .append("gameType",    "KNIGHT_TOUR")
                     .append("roundNumber", roundNumber)
                     .append("algorithm",   algorithm)
-                    .append("timeMs",      timeMs)
+                    .append("timeNs",      timeNs)
                     .append("timestamp",   new Date());
             timingsCol.insertOne(doc);
         } catch (Exception e) {

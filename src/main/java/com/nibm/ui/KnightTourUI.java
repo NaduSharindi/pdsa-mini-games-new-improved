@@ -62,7 +62,8 @@ public class KnightTourUI extends JDialog {
         if (playerName == null) { dispose(); return; }
 
         buildUI();
-        setSize(700, 750);
+        setSize(700, 800);
+        setMinimumSize(new Dimension(680, 760));
         setLocationRelativeTo(parent);
         askBoardSize();
         setVisible(true);
@@ -239,7 +240,6 @@ public class KnightTourUI extends JDialog {
         JPanel card = makeCard();
         card.setLayout(new BorderLayout());
 
-        // Legend
         JPanel legend = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         legend.setOpaque(false);
         legend.add(makeLegendItem("Start",        CLR_START));
@@ -291,7 +291,7 @@ public class KnightTourUI extends JDialog {
         JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         row.setOpaque(false);
         row.setAlignmentX(Component.LEFT_ALIGNMENT);
-        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44)); // ✅ add this
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
 
         btnGiveUp = makeButton("Give Up (Draw)",
                 new Color(0xFAEEDA), new Color(0x633806));
@@ -319,8 +319,8 @@ public class KnightTourUI extends JDialog {
         statusPanel.setVisible(false);
         statusPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
         statusPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
-        statusPanel.setMinimumSize(new Dimension(100, 50));   // ✅ add this
-        statusPanel.setPreferredSize(new Dimension(600, 50)); // ✅ add this
+        statusPanel.setMinimumSize(new Dimension(100, 50));
+        statusPanel.setPreferredSize(new Dimension(600, 50));
 
         lblStatus = new JLabel("", SwingConstants.CENTER);
         lblStatus.setFont(new Font("SansSerif", Font.BOLD, 13));
@@ -331,13 +331,13 @@ public class KnightTourUI extends JDialog {
         btnNextRound = makeButton("Next Round →", CLR_BG, CLR_MUTED);
         btnNextRound.setEnabled(false);
         btnNextRound.setAlignmentX(Component.LEFT_ALIGNMENT);
-        btnNextRound.setMaximumSize(new Dimension(160, 36)); // ✅ add this
+        btnNextRound.setMaximumSize(new Dimension(160, 36));
         btnNextRound.addActionListener(e -> askBoardSize());
 
         wrapper.add(statusPanel);
         wrapper.add(Box.createVerticalStrut(8));
         wrapper.add(btnNextRound);
-        wrapper.add(Box.createVerticalStrut(16)); // ✅ add this
+        wrapper.add(Box.createVerticalStrut(16));
         return wrapper;
     }
 
@@ -367,6 +367,13 @@ public class KnightTourUI extends JDialog {
 
         lblBoardSize.setText("Computing...");
         lblProgress.setText("0 / " + (size * size));
+
+        lblWarnTime.setText("Computing...");
+        lblBackTime.setText("Computing...");
+        lblWarnSolved.setText("—");
+        lblBackSolved.setText("—");
+        lblWarnSolved.setForeground(CLR_MUTED);
+        lblBackSolved.setForeground(CLR_MUTED);
 
         SwingWorker<KnightRound, Void> worker =
                 new SwingWorker<KnightRound, Void>() {
@@ -400,27 +407,36 @@ public class KnightTourUI extends JDialog {
                 + "  Col " + game.getStartCol());
         lblProgress.setText("1 / " + (boardSize * boardSize));
 
-        lblWarnTime.setText(game.getWarnsdorffTimeMs() + " ms");
-        lblBackTime.setText(game.getBacktrackTimeMs() + " ms");
+        lblWarnTime.setText("—");
+        lblBackTime.setText("—");
+        lblWarnSolved.setText("—");
+        lblBackSolved.setText("—");
+        lblWarnSolved.setForeground(CLR_MUTED);
+        lblBackSolved.setForeground(CLR_MUTED);
 
-        lblWarnSolved.setText(game.isWarnsdorffSolved() ? "✓" : "✗");
-        lblWarnSolved.setForeground(
-                game.isWarnsdorffSolved() ? CLR_SUCCESS : CLR_DANGER);
-        lblBackSolved.setText(game.isBacktrackSolved() ? "✓" : "✗");
-        lblBackSolved.setForeground(
-                game.isBacktrackSolved() ? CLR_SUCCESS : CLR_DANGER);
-
-        // Update instruction with correct total
         updateInstructionCard();
 
         boardPanel.setData(boardSize,
                 game.getPlayerSequence(),
                 game.getWarnsdorffTour(),
                 game.getStartRow(), game.getStartCol(),
-                false);  // not showing solution yet
+                false);
         boardPanel.repaint();
 
         btnGiveUp.setEnabled(true);
+    }
+
+    private void revealAlgorithmResults() {
+        lblWarnTime.setText(game.getWarnsdorffTimeMs() + " ns");
+        lblBackTime.setText(game.getBacktrackTimeMs() + " ns");
+
+        lblWarnSolved.setText(game.isWarnsdorffSolved() ? "✓" : "✗");
+        lblWarnSolved.setForeground(
+                game.isWarnsdorffSolved() ? CLR_SUCCESS : CLR_DANGER);
+
+        lblBackSolved.setText(game.isBacktrackSolved() ? "✓" : "✗");
+        lblBackSolved.setForeground(
+                game.isBacktrackSolved() ? CLR_SUCCESS : CLR_DANGER);
     }
 
     // Update instruction label with correct board total
@@ -468,7 +484,6 @@ public class KnightTourUI extends JDialog {
                 break;
 
             case "ALREADY_VISITED":
-                // Just flash a warning — don't end game
                 showError("You already visited that square!\n"
                         + "Choose an unvisited square.");
                 break;
@@ -490,6 +505,8 @@ public class KnightTourUI extends JDialog {
 
     // ── Win handler ───────────────────────────────────────────
     private void handleWin() {
+        revealAlgorithmResults();
+
         List<KnightMove> seq = game.getPlayerSequence();
         boolean valid = game.isValidTour(seq);
 
@@ -512,6 +529,8 @@ public class KnightTourUI extends JDialog {
 
     // ── Invalid move handler ──────────────────────────────────
     private void handleInvalidMove(int row, int col) {
+        revealAlgorithmResults();
+
         showStatus("Invalid move! That's not a valid knight move.", CLR_DANGER);
         btnGiveUp.setEnabled(false);
         btnShowSolution.setEnabled(true);
@@ -534,6 +553,8 @@ public class KnightTourUI extends JDialog {
         if (choice != JOptionPane.YES_OPTION) return;
 
         gameOver = true;
+        revealAlgorithmResults();
+
         showStatus("Draw — you completed "
                 + game.getPlayerMoveCount() + " / "
                 + (boardSize * boardSize) + " moves.", CLR_MUTED);
@@ -558,7 +579,6 @@ public class KnightTourUI extends JDialog {
                 ((Timer) e.getSource()).stop();
             }
         });
-        // Switch board to solution mode
         boardPanel.setShowSolution(true,
                 game.getTourAsMoves(game.getWarnsdorffTour()));
         animTimer.start();
@@ -570,8 +590,8 @@ public class KnightTourUI extends JDialog {
                 "<html><b>🎉 Congratulations!</b><br>"
                         + "You completed the full knight's tour!<br>"
                         + "Moves: <b>" + (boardSize * boardSize) + "</b><br>"
-                        + "Warnsdorff time: " + game.getWarnsdorffTimeMs() + " ms<br>"
-                        + "Backtracking time: " + game.getBacktrackTimeMs() + " ms<br><br>"
+                        + "Warnsdorff time: " + game.getWarnsdorffTimeMs() + " ns<br>"
+                        + "Backtracking time: " + game.getBacktrackTimeMs() + " ns<br><br>"
                         + "Your tour has been saved to the database.</html>",
                 "You Win!", JOptionPane.INFORMATION_MESSAGE);
     }
@@ -603,12 +623,10 @@ public class KnightTourUI extends JDialog {
         private int[][] warnsdorffTour;
         private int startRow, startCol;
 
-        // Solution animation mode
         private boolean showSolution = false;
         private List<KnightMove> solutionMoves;
         private int animStep = 0;
 
-        // Valid-move hints
         private boolean[][] validHints;
 
         public void setData(int boardSize,
@@ -624,7 +642,6 @@ public class KnightTourUI extends JDialog {
             this.showSolution   = showSolution;
             this.animStep       = 0;
 
-            // Compute valid move hints from last player position
             computeValidHints(playerSeq);
         }
 
@@ -638,7 +655,6 @@ public class KnightTourUI extends JDialog {
 
         public void setAnimStep(int step) { this.animStep = step; }
 
-        // Compute which squares are valid next moves
         private void computeValidHints(List<KnightMove> seq) {
             validHints = new boolean[boardSize][boardSize];
             if (seq == null || seq.isEmpty()) return;
@@ -646,7 +662,6 @@ public class KnightTourUI extends JDialog {
             int[] DX = {-2,-1, 1, 2, 2, 1,-1,-2};
             int[] DY = { 1, 2, 2, 1,-1,-2,-2,-1};
 
-            // Mark visited cells
             boolean[][] visited = new boolean[boardSize][boardSize];
             for (KnightMove m : seq) visited[m.getRow()][m.getCol()] = true;
 
@@ -676,7 +691,6 @@ public class KnightTourUI extends JDialog {
             int cellH = h / boardSize;
             int fs    = (boardSize == 8) ? 11 : 7;
 
-            // Build visited map from current display sequence
             List<KnightMove> displaySeq = showSolution
                     ? solutionMoves : playerSeq;
 
@@ -698,7 +712,6 @@ public class KnightTourUI extends JDialog {
                 }
             }
 
-            // Draw cells
             for (int r = 0; r < boardSize; r++) {
                 for (int c = 0; c < boardSize; c++) {
                     int x = c * cellW;
@@ -726,7 +739,6 @@ public class KnightTourUI extends JDialog {
                     g2.setStroke(new BasicStroke(0.5f));
                     g2.drawRect(x, y, cellW, cellH);
 
-                    // Move number label
                     if (visited[r][c]) {
                         g2.setColor(Color.WHITE);
                         g2.setFont(new Font("SansSerif", Font.BOLD, fs));
@@ -737,7 +749,6 @@ public class KnightTourUI extends JDialog {
                                 y + (cellH + fm.getAscent()) / 2 - 2);
                     }
 
-                    // Knight symbol at current position
                     if (r == lastR && c == lastC && visited[r][c]) {
                         g2.setFont(new Font("SansSerif", Font.PLAIN,
                                 (boardSize == 8) ? 20 : 13));
@@ -749,7 +760,6 @@ public class KnightTourUI extends JDialog {
                 }
             }
 
-            // Row/col coordinates on edges (8x8 only)
             if (boardSize == 8) {
                 g2.setFont(new Font("SansSerif", Font.PLAIN, 9));
                 g2.setColor(CLR_MUTED);

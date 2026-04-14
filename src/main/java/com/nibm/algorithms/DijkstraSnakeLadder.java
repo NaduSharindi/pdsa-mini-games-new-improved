@@ -7,11 +7,6 @@ public class DijkstraSnakeLadder {
 
     private int minThrows;
 
-    /**
-     * Uses Dijkstra with uniform edge weight (1 throw per move).
-     * On a uniform graph this equals BFS, but demonstrates
-     * a different algorithmic approach for comparison.
-     */
     public void solve(int[] board, int totalCells) {
         if (board == null || totalCells <= 0) {
             throw new IllegalArgumentException(
@@ -22,22 +17,21 @@ public class DijkstraSnakeLadder {
         Arrays.fill(dist, Integer.MAX_VALUE);
         dist[1] = 0;
 
-        // PriorityQueue: {distance, cell}
         PriorityQueue<int[]> pq = new PriorityQueue<>(
-                (a, b) -> a[0] - b[0]
+                (a, b) -> Integer.compare(a[0], b[0])
         );
         pq.add(new int[]{0, 1});
         minThrows = -1;
 
         while (!pq.isEmpty()) {
             int[] curr = pq.poll();
-            int throws_ = curr[0];
-            int cell    = curr[1];
+            int throwsUsed = curr[0];
+            int cell = curr[1];
 
-            if (throws_ > dist[cell]) continue; // stale entry
+            if (throwsUsed > dist[cell]) continue;
 
             if (cell == totalCells) {
-                minThrows = throws_;
+                minThrows = throwsUsed;
                 return;
             }
 
@@ -45,10 +39,9 @@ public class DijkstraSnakeLadder {
                 int next = cell + dice;
                 if (next > totalCells) continue;
 
-                // Apply snake or ladder
                 next = board[next];
+                int newDist = throwsUsed + 1;
 
-                int newDist = throws_ + 1;
                 if (newDist < dist[next]) {
                     dist[next] = newDist;
                     pq.add(new int[]{newDist, next});
@@ -57,5 +50,7 @@ public class DijkstraSnakeLadder {
         }
     }
 
-    public int getMinThrows() { return minThrows; }
+    public int getMinThrows() {
+        return minThrows;
+    }
 }

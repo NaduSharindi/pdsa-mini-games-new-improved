@@ -17,77 +17,74 @@ public class SnakeLadderRepository {
 
     public SnakeLadderRepository() {
         MongoDatabase db = MongoDBConnection.getDatabase();
-        roundsCol  = db.getCollection("sl_rounds");
+        roundsCol = db.getCollection("sl_rounds");
         timingsCol = db.getCollection("algorithm_timings");
         resultsCol = db.getCollection("player_results");
     }
 
-    // ── Save full round ───────────────────────────────────────
     public void saveRound(SnakeLadderRound round) {
         try {
-            // Convert snakes array to list of documents
             List<Document> snakeDocs = new ArrayList<>();
             for (int[] s : round.getSnakes()) {
                 snakeDocs.add(new Document("head", s[0]).append("tail", s[1]));
             }
 
-            // Convert ladders array to list of documents
             List<Document> ladderDocs = new ArrayList<>();
             for (int[] l : round.getLadders()) {
                 ladderDocs.add(new Document("base", l[0]).append("top", l[1]));
             }
 
             Document doc = new Document()
-                    .append("gameType",        "SNAKE_LADDER")
-                    .append("roundNumber",     round.getRoundNumber())
-                    .append("n",               round.getN())
-                    .append("totalCells",      round.getTotalCells())
-                    .append("snakes",          snakeDocs)
-                    .append("ladders",         ladderDocs)
-                    .append("bfsAnswer",       round.getBfsAnswer())
-                    .append("dijkstraAnswer",  round.getDijkstraAnswer())
-                    .append("bfsTimeMs",       round.getBfsTimeMs())
-                    .append("dijkstraTimeMs",  round.getDijkstraTimeMs())
-                    .append("timestamp",       new Date());
+                    .append("gameType", "SNAKE_LADDER")
+                    .append("roundNumber", round.getRoundNumber())
+                    .append("n", round.getN())
+                    .append("totalCells", round.getTotalCells())
+                    .append("snakes", snakeDocs)
+                    .append("ladders", ladderDocs)
+                    .append("bfsAnswer", round.getBfsAnswer())
+                    .append("dijkstraAnswer", round.getDijkstraAnswer())
+                    .append("bfsTimeNs", round.getBfsTimeNs())
+                    .append("dijkstraTimeNs", round.getDijkstraTimeNs())
+                    .append("timestamp", new Date());
 
             roundsCol.insertOne(doc);
 
-            // Save timing records
             saveTimingRecord("SNAKE_LADDER", round.getRoundNumber(),
-                    "BFS",      round.getBfsTimeMs());
+                    "BFS", round.getBfsTimeNs());
             saveTimingRecord("SNAKE_LADDER", round.getRoundNumber(),
-                    "Dijkstra", round.getDijkstraTimeMs());
+                    "Dijkstra", round.getDijkstraTimeNs());
 
         } catch (Exception e) {
             System.err.println("DB Error saving SL round: " + e.getMessage());
         }
     }
 
-    // ── Save correct player result ────────────────────────────
-    public void savePlayerResult(String playerName, int answer, int roundNumber) {
+    public void savePlayerResult(String playerName, int throwsUsed,
+                                 int finalPosition, int roundNumber) {
         try {
             Document doc = new Document()
-                    .append("playerName",  playerName)
-                    .append("answer",      answer)
+                    .append("playerName", playerName)
+                    .append("throwsUsed", throwsUsed)
+                    .append("finalPosition", finalPosition)
                     .append("roundNumber", roundNumber)
-                    .append("gameType",    "SNAKE_LADDER")
-                    .append("timestamp",   new Date());
+                    .append("gameType", "SNAKE_LADDER")
+                    .append("timestamp", new Date());
+
             resultsCol.insertOne(doc);
         } catch (Exception e) {
             System.err.println("DB Error saving player result: " + e.getMessage());
         }
     }
 
-    // ── Private timing helper ─────────────────────────────────
     private void saveTimingRecord(String gameType, int roundNumber,
-                                  String algorithm, long timeMs) {
+                                  String algorithm, long timeNs) {
         try {
             Document doc = new Document()
-                    .append("gameType",    gameType)
+                    .append("gameType", gameType)
                     .append("roundNumber", roundNumber)
-                    .append("algorithm",   algorithm)
-                    .append("timeMs",      timeMs)
-                    .append("timestamp",   new Date());
+                    .append("algorithm", algorithm)
+                    .append("timeNs", timeNs)
+                    .append("timestamp", new Date());
             timingsCol.insertOne(doc);
         } catch (Exception e) {
             System.err.println("DB Error saving timing: " + e.getMessage());

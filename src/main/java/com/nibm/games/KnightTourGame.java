@@ -50,17 +50,17 @@ public class KnightTourGame {
 
         // Run Warnsdorff — timed
         WarnsdorffKnight warnsdorff = new WarnsdorffKnight();
-        long wStart = System.currentTimeMillis();
+        long wStart = System.nanoTime();
         warnsdorff.solve(boardSize, startRow, startCol);
-        warnsdorffTimeMs = System.currentTimeMillis() - wStart;
+        warnsdorffTimeMs = System.nanoTime() - wStart;
         warnsdorffTour   = warnsdorff.getTour();
         warnsdorffSolved = warnsdorff.isSolved();
 
         // Run Backtracking — timed
         BacktrackKnight backtrack = new BacktrackKnight();
-        long bStart = System.currentTimeMillis();
+        long bStart = System.nanoTime();
         backtrack.solve(boardSize, startRow, startCol);
-        backtrackTimeMs = System.currentTimeMillis() - bStart;
+        backtrackTimeMs = System.nanoTime() - bStart;
         backtrackTour   = backtrack.getTour();
         backtrackSolved = backtrack.isSolved();
 

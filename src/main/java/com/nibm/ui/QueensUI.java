@@ -12,7 +12,7 @@ import java.awt.event.MouseEvent;
 
 public class QueensUI extends JDialog {
 
-    public static final int BOARD_SIZE = 16;
+    public static final int BOARD_SIZE = 8;
 
     // ── Colours ───────────────────────────────────────────────
     private static final Color CLR_HEADER   = new Color(0x993556);
@@ -59,8 +59,8 @@ public class QueensUI extends JDialog {
         if (playerName == null) { dispose(); return; }
 
         buildUI();
-        setSize(800, 900);
-        setMinimumSize(new Dimension(780, 860));
+        setSize(700, 800);
+        setMinimumSize(new Dimension(780, 760));
         setLocationRelativeTo(parent);
 
         // Initialize game in background (may take time for 16x16)
@@ -98,8 +98,15 @@ public class QueensUI extends JDialog {
         java.util.Arrays.fill(queenCols, -1);
 
         lblTotal.setText("Computing...");
+        lblClaimed.setText("—");
+        lblRemaining.setText("—");
+        lblSeqTime.setText("Computing...");
+        lblThreadTime.setText("Computing...");
+        lblSpeedup.setText("—");
+
         btnSubmit.setEnabled(false);
         btnClear.setEnabled(false);
+        btnNewRound.setEnabled(false);
 
         SwingWorker<QueensRound, Void> worker =
                 new SwingWorker<QueensRound, Void>() {
@@ -146,7 +153,7 @@ public class QueensUI extends JDialog {
         h.setBorder(new EmptyBorder(16, 24, 14, 24));
 
         JLabel title = new JLabel(
-                "Sixteen Queens Puzzle — 16×16 Board");
+                "Sixteen Queens Puzzle — 8×8 Board");
         title.setFont(new Font("SansSerif", Font.BOLD, 15));
         title.setForeground(Color.WHITE);
 
@@ -197,7 +204,7 @@ public class QueensUI extends JDialog {
 
         String[] lines = {
                 "1. Click any square in each row to place a queen (one per row).",
-                "2. All 16 queens must be placed — one per row, none threatening each other.",
+                "2. All 8 queens must be placed — one per row, none threatening each other.",
                 "3. No two queens can share the same column or diagonal.",
                 "4. Click an occupied square to remove that queen.",
                 "5. Submit your arrangement — if it is a valid unseen solution you WIN!",
@@ -277,7 +284,7 @@ public class QueensUI extends JDialog {
         card.setLayout(new BorderLayout());
 
         // Queen counter
-        lblPlaced = new JLabel("Queens placed: 0 / 16");
+        lblPlaced = new JLabel("Queens placed: 0 / 8");
         lblPlaced.setFont(new Font("SansSerif", Font.BOLD, 12));
         lblPlaced.setForeground(CLR_HEADER);
         lblPlaced.setBorder(new EmptyBorder(0, 0, 6, 0));
@@ -362,14 +369,22 @@ public class QueensUI extends JDialog {
         lblClaimed.setText(String.valueOf(claimed));
         lblRemaining.setText(String.valueOf(remaining));
 
-        lblSeqTime.setText(round.getSeqTimeMs() + " ms");
-        lblThreadTime.setText(round.getThreadTimeMs() + " ms");
+        // Hide algorithm results until player finishes a submission
+        lblSeqTime.setText("—");
+        lblThreadTime.setText("—");
+        lblSpeedup.setText("—");
+    }
 
-        // Speed comparison
+    private void revealAlgorithmResults() {
+        if (round == null) return;
+
+        lblSeqTime.setText(round.getSeqTimeMs() + " ns");
+        lblThreadTime.setText(round.getThreadTimeMs() + " ns");
+
         if (round.getThreadTimeMs() > 0 && round.getSeqTimeMs() > 0) {
             double ratio = (double) round.getSeqTimeMs()
                     / round.getThreadTimeMs();
-            lblSpeedup.setText(String.format("%.2fx faster", ratio));
+            lblSpeedup.setText(String.format("%.2fx faster (threaded)", ratio));
         } else {
             lblSpeedup.setText("N/A");
         }
@@ -388,7 +403,7 @@ public class QueensUI extends JDialog {
             queenCols[row] = col;
         }
 
-        lblPlaced.setText("Queens placed: " + queensPlaced + " / 16");
+        lblPlaced.setText("Queens placed: " + queensPlaced + " / 8");
         statusPanel.setVisible(false);
         boardPanel.repaint();
     }
@@ -397,14 +412,15 @@ public class QueensUI extends JDialog {
     private void submitArrangement() {
         // Validation: all 16 queens must be placed
         if (queensPlaced != BOARD_SIZE) {
-            showError("You must place exactly 16 queens (one per row).\n"
-                    + "Currently placed: " + queensPlaced + " / 16\n"
+            showError("You must place exactly 8 queens (one per row).\n"
+                    + "Currently placed: " + queensPlaced + " / 8\n"
                     + "Click a square in each empty row to place a queen.");
             return;
         }
 
         // Validation: check for conflicts before submitting
         if (!game.isValidQueenPlacement(queenCols)) {
+            revealAlgorithmResults();
             showStatus(
                     "Invalid arrangement — queens are threatening each other!",
                     CLR_DANGER);
@@ -423,6 +439,8 @@ public class QueensUI extends JDialog {
         int remaining = total - claimed;
         lblClaimed.setText(String.valueOf(claimed));
         lblRemaining.setText(String.valueOf(remaining));
+
+        revealAlgorithmResults();
 
         switch (result) {
             case "WIN":
@@ -447,6 +465,7 @@ public class QueensUI extends JDialog {
                         CLR_SUCCESS);
                 showAllDoneDialog(total);
                 updateStatsUI();
+                revealAlgorithmResults();
                 btnNewRound.setEnabled(true);
                 break;
 
@@ -466,7 +485,7 @@ public class QueensUI extends JDialog {
     private void clearBoard() {
         java.util.Arrays.fill(queenCols, -1);
         queensPlaced = 0;
-        lblPlaced.setText("Queens placed: 0 / 16");
+        lblPlaced.setText("Queens placed: 0 / 8");
         statusPanel.setVisible(false);
         boardPanel.repaint();
     }
@@ -505,7 +524,7 @@ public class QueensUI extends JDialog {
         JOptionPane.showMessageDialog(this,
                 "<html><b>All solutions found!</b><br><br>"
                         + "All <b>" + total + "</b> solutions to the "
-                        + "16-Queens puzzle have been identified.<br><br>"
+                        + "8-Queens puzzle have been identified.<br><br>"
                         + "All claim flags have been reset.<br>"
                         + "Future players can now submit solutions again.</html>",
                 "Puzzle Complete!", JOptionPane.INFORMATION_MESSAGE);

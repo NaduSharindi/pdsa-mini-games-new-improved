@@ -183,12 +183,12 @@ public class QueensSolutionRepository {
 
     // ── Save timing record ────────────────────────────────────
     public void saveTimingRecord(String algorithm,
-                                 long timeMs, int totalSolutions) {
+                                 long timeNs, int totalSolutions) {
         try {
             Document doc = new Document()
                     .append("gameType",       "SIXTEEN_QUEENS")
                     .append("algorithm",      algorithm)
-                    .append("timeMs",         timeMs)
+                    .append("timeNs",         timeNs)
                     .append("totalSolutions", totalSolutions)
                     .append("timestamp",      new Date());
             timingsCol.insertOne(doc);
@@ -207,7 +207,7 @@ public class QueensSolutionRepository {
                             Filters.eq("algorithm", "Sequential")
                     )
             ).first();
-            return doc != null ? doc.getLong("timeMs") : 0L;
+            return doc != null ? doc.getLong("timeNs") : 0L;
         } catch (Exception e) {
             return 0L;
         }
@@ -222,7 +222,7 @@ public class QueensSolutionRepository {
                             Filters.eq("algorithm", "Threaded")
                     )
             ).first();
-            return doc != null ? doc.getLong("timeMs") : 0L;
+            return doc != null ? doc.getLong("timeNs") : 0L;
         } catch (Exception e) {
             return 0L;
         }

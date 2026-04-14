@@ -8,10 +8,10 @@ import com.nibm.models.TrafficRound;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
+import java.util.List;
 
 public class TrafficUI extends JDialog {
 
-    // ── Colours ───────────────────────────────────────────────
     private static final Color CLR_HEADER  = new Color(0x854F0B);
     private static final Color CLR_BG      = new Color(0xF1EFE8);
     private static final Color CLR_CARD    = new Color(0xFFFFFF);
@@ -25,40 +25,41 @@ public class TrafficUI extends JDialog {
     private static final Color CLR_NODE_ST = new Color(0x1D9E75);
     private static final Color CLR_NODE_SK = new Color(0xE24B4A);
     private static final Color CLR_EDGE    = new Color(0x854F0B);
+    private static final Color CLR_PATH    = new Color(0x185FA5);
 
-    // ── State ─────────────────────────────────────────────────
-    private final TrafficGame game         = new TrafficGame();
-    private final TrafficRepository repo   = new TrafficRepository();
+    private final TrafficGame game = new TrafficGame();
+    private final TrafficRepository repo = new TrafficRepository();
+
     private TrafficRound currentRound;
     private int roundNumber = 0;
     private String playerName;
 
-    // ── UI Components ─────────────────────────────────────────
-    private JLabel lblRound, lblFFTime, lblEKTime;
+    private JLabel lblRound, lblFFTime, lblEKTime, lblFlow, lblPathInfo;
     private NetworkGraphPanel graphPanel;
-    private JTextField txtAnswer;
-    private JButton btnSubmit, btnNextRound;
+    private JButton btnClearPath, btnApplyPath, btnFinish, btnNextRound;
+    private JTextArea txtUsedPaths;
     private JPanel statusPanel;
     private JLabel lblStatus;
 
-    // ── Constructor ───────────────────────────────────────────
     public TrafficUI(JFrame parent) {
         super(parent, "Game 3 — Traffic Simulation", true);
         setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         setResizable(false);
 
         playerName = askPlayerName(parent);
-        if (playerName == null) { dispose(); return; }
+        if (playerName == null) {
+            dispose();
+            return;
+        }
 
         buildUI();
-        setSize(740, 820);
-        setMinimumSize(new Dimension(700, 780));
+        setSize(700, 800);
+        setMinimumSize(new Dimension(780, 760));
         setLocationRelativeTo(parent);
         startNewRound();
         setVisible(true);
     }
 
-    // ── Player name validation ────────────────────────────────
     private String askPlayerName(JFrame parent) {
         while (true) {
             String name = JOptionPane.showInputDialog(
@@ -67,22 +68,25 @@ public class TrafficUI extends JDialog {
             if (name == null) return null;
             name = name.trim();
             if (name.isEmpty()) {
-                showError("Name cannot be empty."); continue;
+                showError("Name cannot be empty.");
+                continue;
             }
             if (!name.matches("[a-zA-Z ]+")) {
-                showError("Name must contain letters and spaces only."); continue;
+                showError("Name must contain letters and spaces only.");
+                continue;
             }
             if (name.length() < 2) {
-                showError("Name must be at least 2 characters."); continue;
+                showError("Name must be at least 2 characters.");
+                continue;
             }
             if (name.length() > 50) {
-                showError("Name too long. Max 50 characters."); continue;
+                showError("Name too long. Max 50 characters.");
+                continue;
             }
             return name;
         }
     }
 
-    // ── Build UI ──────────────────────────────────────────────
     private void buildUI() {
         JPanel root = new JPanel(new BorderLayout());
         root.setBackground(CLR_BG);
@@ -91,11 +95,10 @@ public class TrafficUI extends JDialog {
         JScrollPane scroll = new JScrollPane(buildBody());
         scroll.setBorder(null);
         scroll.getViewport().setBackground(CLR_BG);
-        scroll.setHorizontalScrollBarPolicy(
-                JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        scroll.setVerticalScrollBarPolicy(
-                JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        scroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         root.add(scroll, BorderLayout.CENTER);
+
         root.add(buildFooter(), BorderLayout.SOUTH);
         setContentPane(root);
     }
@@ -105,7 +108,7 @@ public class TrafficUI extends JDialog {
         h.setBackground(CLR_HEADER);
         h.setBorder(new EmptyBorder(16, 24, 14, 24));
 
-        JLabel title = new JLabel("Traffic Simulation — Max Flow A → T");
+        JLabel title = new JLabel("Traffic Simulation — Build Max Flow A → T");
         title.setFont(new Font("SansSerif", Font.BOLD, 15));
         title.setForeground(Color.WHITE);
 
@@ -113,7 +116,7 @@ public class TrafficUI extends JDialog {
         lblRound.setFont(new Font("SansSerif", Font.PLAIN, 12));
         lblRound.setForeground(new Color(0xFFD799));
 
-        h.add(title,    BorderLayout.CENTER);
+        h.add(title, BorderLayout.CENTER);
         h.add(lblRound, BorderLayout.EAST);
         return h;
     }
@@ -130,59 +133,65 @@ public class TrafficUI extends JDialog {
         body.add(Box.createVerticalStrut(10));
         body.add(buildTimingCard());
         body.add(Box.createVerticalStrut(10));
-        body.add(buildAnswerCard());
+        body.add(buildControlCard());
+        body.add(Box.createVerticalStrut(10));
+        body.add(buildUsedPathsCard());
         body.add(Box.createVerticalStrut(10));
         body.add(buildStatusAndNext());
         body.add(Box.createVerticalStrut(16));
         return body;
     }
 
-    // ── Player info card ──────────────────────────────────────
     private JPanel buildPlayerCard() {
         JPanel card = makeCard();
-        card.setLayout(new FlowLayout(FlowLayout.LEFT, 12, 0));
+        card.setLayout(new GridLayout(2, 2, 8, 6));
+
         card.add(makeLabel("Player:", CLR_MUTED, 12));
         JLabel lbl = new JLabel(playerName);
         lbl.setFont(new Font("SansSerif", Font.BOLD, 13));
         lbl.setForeground(CLR_HEADER);
         card.add(lbl);
+
+        card.add(makeLabel("Current Total Flow:", CLR_MUTED, 12));
+        lblFlow = new JLabel("0");
+        lblFlow.setFont(new Font("SansSerif", Font.BOLD, 13));
+        lblFlow.setForeground(CLR_SUCCESS);
+        card.add(lblFlow);
+
         return card;
     }
 
-    // ── Network graph card ────────────────────────────────────
     private JPanel buildGraphCard() {
         JPanel card = makeCard();
         card.setLayout(new BorderLayout());
 
         JLabel title = makeLabel(
-                "Traffic Network  —  Green = Source (A)  |  Red = Sink (T)"
-                        + "  |  Edge labels = capacity (vehicles/min)",
-                CLR_MUTED, 10);
+                "Click nodes to build an augmenting path from A to T",
+                CLR_MUTED, 11);
         title.setBorder(new EmptyBorder(0, 0, 8, 0));
 
         graphPanel = new NetworkGraphPanel();
         graphPanel.setPreferredSize(new Dimension(680, 320));
 
-        card.add(title,      BorderLayout.NORTH);
+        card.add(title, BorderLayout.NORTH);
         card.add(graphPanel, BorderLayout.CENTER);
         return card;
     }
 
-    // ── Timing card ───────────────────────────────────────────
     private JPanel buildTimingCard() {
         JPanel card = makeCard();
         card.setLayout(new GridLayout(3, 2, 8, 6));
 
-        card.add(makeLabel("Algorithm",       CLR_MUTED, 11));
-        card.add(makeLabel("Time Taken",      CLR_MUTED, 11));
+        card.add(makeLabel("Algorithm", CLR_MUTED, 11));
+        card.add(makeLabel("Time Taken", CLR_MUTED, 11));
 
-        card.add(makeLabel("Ford-Fulkerson:", CLR_TEXT,  12));
+        card.add(makeLabel("Ford-Fulkerson:", CLR_TEXT, 12));
         lblFFTime = new JLabel("—");
         lblFFTime.setFont(new Font("SansSerif", Font.BOLD, 12));
         lblFFTime.setForeground(new Color(0x185FA5));
         card.add(lblFFTime);
 
-        card.add(makeLabel("Edmonds-Karp:",   CLR_TEXT,  12));
+        card.add(makeLabel("Edmonds-Karp:", CLR_TEXT, 12));
         lblEKTime = new JLabel("—");
         lblEKTime.setFont(new Font("SansSerif", Font.BOLD, 12));
         lblEKTime.setForeground(CLR_DRAW);
@@ -191,60 +200,58 @@ public class TrafficUI extends JDialog {
         return card;
     }
 
-    // ── Answer input card — player types the max flow ─────────
-    private JPanel buildAnswerCard() {
+    private JPanel buildControlCard() {
         JPanel card = makeCard();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
 
-        JLabel question = new JLabel(
-                "What is the maximum flow from A to T? (vehicles/min)");
-        question.setFont(new Font("SansSerif", Font.BOLD, 13));
-        question.setForeground(CLR_TEXT);
-        question.setAlignmentX(Component.LEFT_ALIGNMENT);
+        lblPathInfo = new JLabel("Selected Path: —");
+        lblPathInfo.setFont(new Font("SansSerif", Font.BOLD, 12));
+        lblPathInfo.setForeground(CLR_TEXT);
+        lblPathInfo.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel hint = new JLabel(
-                "Study the network graph above, then enter your answer:");
-        hint.setFont(new Font("SansSerif", Font.PLAIN, 11));
-        hint.setForeground(CLR_MUTED);
-        hint.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
+        btnRow.setOpaque(false);
 
-        // Input row
-        JPanel inputRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
-        inputRow.setOpaque(false);
-        inputRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        btnClearPath = makeButton("Clear Path", CLR_BG, CLR_TEXT);
+        btnClearPath.addActionListener(e -> clearPath());
 
-        JLabel lblUnit = makeLabel("Max Flow =", CLR_TEXT, 13);
+        btnApplyPath = makeButton("Apply Path", CLR_HEADER, Color.WHITE);
+        btnApplyPath.addActionListener(e -> applyPath());
 
-        txtAnswer = new JTextField(8);
-        txtAnswer.setFont(new Font("SansSerif", Font.BOLD, 15));
-        txtAnswer.setHorizontalAlignment(JTextField.CENTER);
-        txtAnswer.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(CLR_BORDER),
-                new EmptyBorder(4, 8, 4, 8)
-        ));
-        // Submit on Enter key
-        txtAnswer.addActionListener(e -> submitAnswer());
+        btnFinish = makeButton("Finish Round", CLR_BG, CLR_TEXT);
+        btnFinish.addActionListener(e -> finishRound());
 
-        JLabel lblUnit2 = makeLabel("vehicles/min", CLR_MUTED, 11);
+        btnRow.add(btnClearPath);
+        btnRow.add(btnApplyPath);
+        btnRow.add(btnFinish);
 
-        btnSubmit = makeButton("Submit Answer", CLR_HEADER, Color.WHITE);
-        btnSubmit.addActionListener(e -> submitAnswer());
-
-        inputRow.add(lblUnit);
-        inputRow.add(txtAnswer);
-        inputRow.add(lblUnit2);
-        inputRow.add(Box.createHorizontalStrut(8));
-        inputRow.add(btnSubmit);
-
-        card.add(question);
-        card.add(Box.createVerticalStrut(4));
-        card.add(hint);
-        card.add(Box.createVerticalStrut(10));
-        card.add(inputRow);
+        card.add(lblPathInfo);
+        card.add(Box.createVerticalStrut(8));
+        card.add(btnRow);
         return card;
     }
 
-    // ── Status + Next round ───────────────────────────────────
+    private JPanel buildUsedPathsCard() {
+        JPanel card = makeCard();
+        card.setLayout(new BorderLayout());
+
+        JLabel title = makeLabel("Applied Paths", CLR_TEXT, 12);
+        title.setFont(new Font("SansSerif", Font.BOLD, 12));
+
+        txtUsedPaths = new JTextArea(6, 30);
+        txtUsedPaths.setEditable(false);
+        txtUsedPaths.setLineWrap(true);
+        txtUsedPaths.setWrapStyleWord(true);
+        txtUsedPaths.setFont(new Font("SansSerif", Font.PLAIN, 12));
+
+        JScrollPane sp = new JScrollPane(txtUsedPaths);
+        sp.setBorder(BorderFactory.createLineBorder(CLR_BORDER));
+
+        card.add(title, BorderLayout.NORTH);
+        card.add(sp, BorderLayout.CENTER);
+        return card;
+    }
+
     private JPanel buildStatusAndNext() {
         JPanel wrapper = new JPanel();
         wrapper.setLayout(new BoxLayout(wrapper, BoxLayout.Y_AXIS));
@@ -288,191 +295,236 @@ public class TrafficUI extends JDialog {
         return footer;
     }
 
-    // ── Start new round ───────────────────────────────────────
     private void startNewRound() {
         roundNumber++;
         lblRound.setText("Round " + roundNumber);
 
-        txtAnswer.setText("");
-        txtAnswer.setEnabled(false);
-        btnSubmit.setEnabled(false);
+        btnClearPath.setEnabled(false);
+        btnApplyPath.setEnabled(false);
+        btnFinish.setEnabled(false);
         btnNextRound.setEnabled(false);
         statusPanel.setVisible(false);
+        txtUsedPaths.setText("");
+        lblPathInfo.setText("Selected Path: —");
+        lblFlow.setText("0");
         lblFFTime.setText("Computing...");
         lblEKTime.setText("Computing...");
 
-        SwingWorker<TrafficRound, Void> worker =
-                new SwingWorker<TrafficRound, Void>() {
-                    protected TrafficRound doInBackground() {
-                        return game.newRound(roundNumber);
-                    }
-                    protected void done() {
-                        try {
-                            currentRound = get();
-                            repo.saveRound(currentRound);
-                            updateRoundUI();
-                        } catch (Exception ex) {
-                            showError("Error starting round: "
-                                    + ex.getMessage());
-                        }
-                    }
-                };
+        SwingWorker<TrafficRound, Void> worker = new SwingWorker<TrafficRound, Void>() {
+            @Override
+            protected TrafficRound doInBackground() {
+                return game.newRound(roundNumber);
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    currentRound = get();
+                    repo.saveRound(currentRound);
+                    updateRoundUI();
+                } catch (Exception ex) {
+                    showError("Error starting round: " + ex.getMessage());
+                }
+            }
+        };
         worker.execute();
     }
 
     private void updateRoundUI() {
-        lblFFTime.setText(game.getFfTimeMs() + " ms");
-        lblEKTime.setText(game.getEkTimeMs() + " ms");
+        lblFFTime.setText("—");
+        lblEKTime.setText("—");
 
-        graphPanel.setNetwork(game.getNetwork().getCapacity());
+        // Pass initial empty path — network is fresh
+        graphPanel.setNetwork(
+                game.getNetwork().getCapacity(),
+                game.getResidualCapacity(),
+                game.getSelectedPath()
+        );
         graphPanel.repaint();
 
-        txtAnswer.setEnabled(true);
-        btnSubmit.setEnabled(true);
-        txtAnswer.requestFocus();
+        // ✅ Enable buttons AFTER data is set
+        btnClearPath.setEnabled(true);
+        btnApplyPath.setEnabled(true);
+        btnFinish.setEnabled(true);
+
+        // Show instruction
+        showStatus(
+                "Click node A to start building your path to T.",
+                CLR_DRAW);
     }
 
-    // ── Submit and validate answer ────────────────────────────
-    private void submitAnswer() {
-        String input = txtAnswer.getText().trim();
+    private void clearPath() {
+        game.clearCurrentPath();
+        refreshPathUI("Path cleared.");
+    }
 
-        // ── Input Validations ──────────────────────────────────
-
-        // Validation 1: not empty
-        if (input.isEmpty()) {
-            highlightFieldError(txtAnswer,
-                    "Please enter the maximum flow before submitting.");
+    private void applyPath() {
+        if (!game.isPathComplete()) {
+            showStatus("Select a full path from A to T first.", CLR_DANGER);
             return;
         }
 
-        // Validation 2: digits only (no negatives, no decimals)
-        if (!input.matches("\\d+")) {
-            highlightFieldError(txtAnswer,
-                    "Maximum flow must be a positive whole number.\n"
-                            + "No letters, decimals, or negative signs allowed.");
+        int bottleneck = game.getCurrentPathBottleneck();
+        boolean ok = game.applyCurrentPath();
+
+        if (!ok) {
+            showStatus("Could not apply the selected path.", CLR_DANGER);
             return;
         }
 
-        // Validation 3: parse safely
-        int answer;
-        try {
-            answer = Integer.parseInt(input);
-        } catch (NumberFormatException e) {
-            highlightFieldError(txtAnswer,
-                    "Number is too large. Please check your answer.");
-            return;
+        refreshPathUI("Applied path with bottleneck = " + bottleneck);
+
+        if (game.isFinished()) {
+            finishRound();
         }
+    }
 
-        // Validation 4: must be positive
-        if (answer <= 0) {
-            highlightFieldError(txtAnswer,
-                    "Maximum flow must be greater than zero.");
-            return;
-        }
+    private void finishRound() {
 
-        // Validation 5: sanity upper bound
-        // Max possible flow with 13 edges each capacity 15 = 195
-        if (answer > 195) {
-            highlightFieldError(txtAnswer,
-                    "Answer seems too large for this network.\n"
-                            + "Maximum possible flow with capacity 15 per edge is 195.");
-            return;
-        }
+        lblFFTime.setText(game.getFfTimeNs() + " ns");
+        lblEKTime.setText(game.getEkTimeNs() + " ns");
 
-        // ── All validations passed ─────────────────────────────
-        txtAnswer.setEnabled(false);
-        btnSubmit.setEnabled(false);
-
-        String result = game.classifyAnswer(answer);
+        btnClearPath.setEnabled(false);
+        btnApplyPath.setEnabled(false);
+        btnFinish.setEnabled(false);
+        btnNextRound.setEnabled(true);
 
         currentRound.setPlayerName(playerName);
-        currentRound.setPlayerAnswer(answer);
+        currentRound.setPlayerFlow(game.getPlayerFlow());
+        currentRound.setCorrect(game.isPlayerOptimal());
+        currentRound.setPlayerPaths(game.getUsedPaths());
 
-        switch (result) {
-            case "WIN":
-                currentRound.setCorrect(true);
-                showStatus(
-                        "Correct! Max flow = " + answer + " vehicles/min",
-                        CLR_SUCCESS);
-                repo.savePlayerResult(playerName, answer, roundNumber);
-                showWinDialog(answer);
-                break;
+        repo.savePlayerResult(playerName, game.getPlayerFlow(), roundNumber, game.getUsedPaths());
 
-            case "DRAW":
-                currentRound.setCorrect(false);
-                showStatus(
-                        "Close! Correct max flow = "
-                                + game.getCorrectAnswer()
-                                + ", you entered " + answer,
-                        CLR_DRAW);
-                showDrawDialog(answer, game.getCorrectAnswer());
-                break;
+        if (game.isPlayerOptimal()) {
+            showStatus("Perfect! You reached the exact maximum flow: " + game.getPlayerFlow(), CLR_SUCCESS);
+            showFinishDialog("Correct Result", JOptionPane.INFORMATION_MESSAGE);
+        } else if (game.getPlayerFlow() >= game.getCorrectAnswer() - 2) {
+            showStatus("Close! Your flow = " + game.getPlayerFlow()
+                    + ", optimal = " + game.getCorrectAnswer(), CLR_DRAW);
+            showFinishDialog("Round Result", JOptionPane.WARNING_MESSAGE);
+        } else {
+            showStatus("Not optimal. Your flow = " + game.getPlayerFlow()
+                    + ", optimal = " + game.getCorrectAnswer(), CLR_DANGER);
+            showFinishDialog("Wrong Result", JOptionPane.ERROR_MESSAGE);
+        }
+    }
 
-            case "LOSE":
-            default:
-                currentRound.setCorrect(false);
-                showStatus(
-                        "Wrong! Correct max flow = "
-                                + game.getCorrectAnswer()
-                                + " vehicles/min",
-                        CLR_DANGER);
-                showLoseDialog(game.getCorrectAnswer(), answer);
-                break;
+    private void showFinishDialog(String title, int messageType) {
+        JOptionPane.showMessageDialog(this,
+                "<html><b>" + title + "</b><br><br>"
+                        + "Your Built Flow: <b>" + game.getPlayerFlow() + "</b><br>"
+                        + "Ford-Fulkerson Max Flow: <b>" + game.getCorrectAnswer() + "</b><br>"
+                        + "Edmonds-Karp Max Flow: <b>" + game.getEkAnswer() + "</b><br><br>"
+                        + "Ford-Fulkerson Time: " + game.getFfTimeNs() + " ns<br>"
+                        + "Edmonds-Karp Time: " + game.getEkTimeNs() + " ns</html>",
+                title,
+                messageType);
+    }
+
+    private void refreshPathUI(String message) {
+        List<Integer> path = game.getSelectedPath();
+
+        if (path.isEmpty()) {
+            lblPathInfo.setText("Selected Path: —");
+        } else {
+            StringBuilder sb = new StringBuilder("Selected Path: ");
+            for (int i = 0; i < path.size(); i++) {
+                if (i > 0) sb.append(" → ");
+                sb.append(TrafficNetwork.NODE_NAMES[path.get(i)]);
+            }
+            if (game.isPathComplete()) {
+                sb.append(" | Bottleneck = ").append(game.getCurrentPathBottleneck());
+            }
+            lblPathInfo.setText(sb.toString());
         }
 
-        btnNextRound.setEnabled(true);
+        lblFlow.setText(String.valueOf(game.getPlayerFlow()));
+
+        StringBuilder used = new StringBuilder();
+        for (String s : game.getUsedPaths()) {
+            used.append(s).append("\n");
+        }
+        txtUsedPaths.setText(used.toString());
+
+        graphPanel.setNetwork(game.getNetwork().getCapacity(), game.getResidualCapacity(), game.getSelectedPath());
+        graphPanel.repaint();
+
+        showStatus(message, CLR_DRAW);
     }
 
-    // ── Result dialogs ────────────────────────────────────────
-    private void showWinDialog(int answer) {
-        JOptionPane.showMessageDialog(this,
-                "<html><b>Correct!</b><br><br>"
-                        + "Maximum Flow: <b>" + answer + " vehicles/min</b><br>"
-                        + "Ford-Fulkerson time: " + game.getFfTimeMs() + " ms<br>"
-                        + "Edmonds-Karp time:   " + game.getEkTimeMs() + " ms<br><br>"
-                        + "Your answer has been saved to the database.</html>",
-                "You Win!", JOptionPane.INFORMATION_MESSAGE);
-    }
-
-    private void showDrawDialog(int entered, int correct) {
-        JOptionPane.showMessageDialog(this,
-                "<html><b>Almost correct!</b><br><br>"
-                        + "You entered: <b>" + entered + "</b><br>"
-                        + "Correct max flow: <b>" + correct + "</b><br><br>"
-                        + "You were within ±2 — very close!</html>",
-                "Draw", JOptionPane.WARNING_MESSAGE);
-    }
-
-    private void showLoseDialog(int correct, int entered) {
-        JOptionPane.showMessageDialog(this,
-                "<html><b>Wrong answer!</b><br><br>"
-                        + "You entered: <b>" + entered + "</b><br>"
-                        + "Correct max flow: <b>" + correct + " vehicles/min</b><br><br>"
-                        + "Tip: trace each path from A to T and find the bottleneck.</html>",
-                "You Lose", JOptionPane.ERROR_MESSAGE);
-    }
-
-    // ── Network graph painting panel ──────────────────────────
     private class NetworkGraphPanel extends JPanel {
 
         private int[][] capacity;
+        private int[][] residual;
+        private List<Integer> selectedPath;
 
-        // Fixed node positions as fractions of panel [x, y]
-        // Layout mirrors the CW spec edge list visually
         private final double[][] NODE_POS = {
-                {0.05, 0.50},  // A (source)
-                {0.28, 0.18},  // B
-                {0.28, 0.50},  // C
-                {0.28, 0.82},  // D
-                {0.54, 0.28},  // E
-                {0.54, 0.72},  // F
-                {0.78, 0.18},  // G
-                {0.78, 0.62},  // H
-                {0.95, 0.40},  // T (sink)
+                {0.05, 0.50},
+                {0.28, 0.18},
+                {0.28, 0.50},
+                {0.28, 0.82},
+                {0.54, 0.28},
+                {0.54, 0.72},
+                {0.78, 0.18},
+                {0.78, 0.62},
+                {0.95, 0.40},
         };
 
-        public void setNetwork(int[][] capacity) {
+        public NetworkGraphPanel() {
+            setCursor(Cursor.getDefaultCursor());
+
+            // ── Click listener ────────────────────────────────────
+            addMouseListener(new java.awt.event.MouseAdapter() {
+                @Override
+                public void mouseClicked(java.awt.event.MouseEvent e) {
+                    // ✅ FIXED: only block if data not loaded
+                    if (capacity == null) return;
+
+                    int node = findClickedNode(e.getX(), e.getY());
+                    if (node == -1) return;
+
+                    boolean added = game.addNodeToPath(node);
+                    if (added) {
+                        refreshPathUI("Node "
+                                + TrafficNetwork.NODE_NAMES[node] + " added.");
+                    } else {
+                        // Show why it was rejected
+                        if (game.getSelectedPath().isEmpty()) {
+                            showStatus(
+                                    "Start from node A (source).",
+                                    CLR_DANGER);
+                        } else {
+                            showStatus(
+                                    "Node " + TrafficNetwork.NODE_NAMES[node]
+                                            + " is not reachable from current path "
+                                            + "or has no remaining capacity.",
+                                    CLR_DANGER);
+                        }
+                    }
+                }
+            });
+
+            // ── Hover listener — changes cursor over nodes ────────
+            addMouseMotionListener(new java.awt.event.MouseMotionAdapter() {
+                @Override
+                public void mouseMoved(java.awt.event.MouseEvent e) {
+                    if (capacity == null) return;
+                    int node = findClickedNode(e.getX(), e.getY());
+                    if (node != -1) {
+                        setCursor(Cursor.getPredefinedCursor(
+                                Cursor.HAND_CURSOR));
+                    } else {
+                        setCursor(Cursor.getDefaultCursor());
+                    }
+                }
+            });
+        }
+
+        public void setNetwork(int[][] capacity, int[][] residual, List<Integer> selectedPath) {
             this.capacity = capacity;
+            this.residual = residual;
+            this.selectedPath = selectedPath;
         }
 
         @Override
@@ -481,63 +533,58 @@ public class TrafficUI extends JDialog {
             if (capacity == null) return;
 
             Graphics2D g2 = (Graphics2D) g;
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
-                    RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
             int w = getWidth();
             int h = getHeight();
-            int r = 20; // node radius
+            int r = 20;
 
-            // Compute pixel positions
             int[] px = new int[9];
             int[] py = new int[9];
             for (int i = 0; i < 9; i++) {
-                px[i] = (int)(NODE_POS[i][0] * w);
-                py[i] = (int)(NODE_POS[i][1] * h);
+                px[i] = (int) (NODE_POS[i][0] * w);
+                py[i] = (int) (NODE_POS[i][1] * h);
             }
-
-            // ── Draw edges ────────────────────────────────────
-            g2.setStroke(new BasicStroke(2f,
-                    BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
 
             for (int[] edge : TrafficNetwork.EDGES) {
                 int from = edge[0];
-                int to   = edge[1];
-                int cap  = capacity[from][to];
+                int to = edge[1];
+                int cap = capacity[from][to];
+                int rem = residual[from][to];
 
-                g2.setColor(CLR_EDGE);
-                drawArrow(g2, px[from], py[from],
-                        px[to],   py[to], r);
+                boolean onSelectedPath = isEdgeInSelectedPath(from, to);
 
-                // Capacity label — offset perpendicular to edge
-                // to avoid overlapping the line
-                double angle = Math.atan2(
-                        py[to] - py[from], px[to] - px[from]);
+                g2.setColor(onSelectedPath ? CLR_PATH : CLR_EDGE);
+                g2.setStroke(new BasicStroke(onSelectedPath ? 3f : 2f,
+                        BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+
+                drawArrow(g2, px[from], py[from], px[to], py[to], r);
+
+                double angle = Math.atan2(py[to] - py[from], px[to] - px[from]);
                 int mx = (px[from] + px[to]) / 2;
                 int my = (py[from] + py[to]) / 2;
+                int offX = (int) (-Math.sin(angle) * 12);
+                int offY = (int) (Math.cos(angle) * 12);
 
-                // Perpendicular offset so label is beside the line
-                int offX = (int)(-Math.sin(angle) * 12);
-                int offY = (int)( Math.cos(angle) * 12);
-
-                g2.setFont(new Font("SansSerif", Font.BOLD, 11));
+                g2.setFont(new Font("SansSerif", Font.BOLD, 10));
                 g2.setColor(new Color(0x633806));
-                g2.drawString(String.valueOf(cap),
-                        mx + offX - 4, my + offY + 4);
+                g2.drawString(rem + "/" + cap, mx + offX - 8, my + offY + 4);
             }
 
-            // ── Draw nodes ────────────────────────────────────
             for (int i = 0; i < 9; i++) {
                 Color fill;
                 Color textColor;
                 if (i == TrafficNetwork.SOURCE) {
-                    fill      = CLR_NODE_ST;
+                    fill = CLR_NODE_ST;
                     textColor = Color.WHITE;
                 } else if (i == TrafficNetwork.SINK) {
-                    fill      = CLR_NODE_SK;
+                    fill = CLR_NODE_SK;
+                    textColor = Color.WHITE;
+                } else if (selectedPath != null && selectedPath.contains(i)) {
+                    fill = CLR_PATH;
                     textColor = Color.WHITE;
                 } else {
-                    fill      = CLR_NODE_BG;
+                    fill = CLR_NODE_BG;
                     textColor = CLR_TEXT;
                 }
 
@@ -547,7 +594,6 @@ public class TrafficUI extends JDialog {
                 g2.setStroke(new BasicStroke(1.5f));
                 g2.drawOval(px[i] - r, py[i] - r, r * 2, r * 2);
 
-                // Node label
                 g2.setColor(textColor);
                 g2.setFont(new Font("SansSerif", Font.BOLD, 13));
                 FontMetrics fm = g2.getFontMetrics();
@@ -558,33 +604,55 @@ public class TrafficUI extends JDialog {
             }
         }
 
-        // Draw directed arrow — starts/ends at node edge (radius offset)
-        private void drawArrow(Graphics2D g2,
-                               int x1, int y1,
-                               int x2, int y2, int r) {
+        private boolean isEdgeInSelectedPath(int from, int to) {
+            if (selectedPath == null || selectedPath.size() < 2) return false;
+            for (int i = 0; i < selectedPath.size() - 1; i++) {
+                if (selectedPath.get(i) == from && selectedPath.get(i + 1) == to) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private int findClickedNode(int x, int y) {
+            int w = getWidth();
+            int h = getHeight();
+            int drawR  = 20;       // visual radius (keep same)
+            int clickR = 28;       // ✅ larger click radius — easier to hit
+
+            for (int i = 0; i < 9; i++) {
+                int px = (int) (NODE_POS[i][0] * w);
+                int py = (int) (NODE_POS[i][1] * h);
+
+                double dist = Math.sqrt(
+                        Math.pow(x - px, 2) + Math.pow(y - py, 2));
+                if (dist <= clickR) return i;  // ✅ use clickR not drawR
+            }
+            return -1;
+        }
+
+        private void drawArrow(Graphics2D g2, int x1, int y1, int x2, int y2, int r) {
             double angle = Math.atan2(y2 - y1, x2 - x1);
-            int sx = (int)(x1 + r * Math.cos(angle));
-            int sy = (int)(y1 + r * Math.sin(angle));
-            int ex = (int)(x2 - r * Math.cos(angle));
-            int ey = (int)(y2 - r * Math.sin(angle));
+            int sx = (int) (x1 + r * Math.cos(angle));
+            int sy = (int) (y1 + r * Math.sin(angle));
+            int ex = (int) (x2 - r * Math.cos(angle));
+            int ey = (int) (y2 - r * Math.sin(angle));
 
             g2.drawLine(sx, sy, ex, ey);
 
-            // Arrowhead
             int aw = 9;
             double a1 = angle + Math.toRadians(145);
             double a2 = angle - Math.toRadians(145);
             int[] xp = {ex,
-                    (int)(ex + aw * Math.cos(a1)),
-                    (int)(ex + aw * Math.cos(a2))};
+                    (int) (ex + aw * Math.cos(a1)),
+                    (int) (ex + aw * Math.cos(a2))};
             int[] yp = {ey,
-                    (int)(ey + aw * Math.sin(a1)),
-                    (int)(ey + aw * Math.sin(a2))};
+                    (int) (ey + aw * Math.sin(a1)),
+                    (int) (ey + aw * Math.sin(a2))};
             g2.fillPolygon(xp, yp, 3);
         }
     }
 
-    // ── UI helpers ────────────────────────────────────────────
     private JPanel makeCard() {
         JPanel card = new JPanel();
         card.setBackground(CLR_CARD);
@@ -629,20 +697,6 @@ public class TrafficUI extends JDialog {
         }
         lblStatus.setForeground(color);
         statusPanel.setVisible(true);
-    }
-
-    private void highlightFieldError(JTextField field, String message) {
-        field.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(CLR_DANGER, 2),
-                new EmptyBorder(4, 8, 4, 8)
-        ));
-        showError(message);
-        field.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(CLR_BORDER),
-                new EmptyBorder(4, 8, 4, 8)
-        ));
-        field.requestFocus();
-        field.selectAll();
     }
 
     private void showError(String msg) {

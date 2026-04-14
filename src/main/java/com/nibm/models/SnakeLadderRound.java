@@ -2,55 +2,56 @@ package com.nibm.models;
 
 public class SnakeLadderRound {
 
-    private int n;                  // board size NxN
-    private int totalCells;         // N*N
-    private int[][] snakes;         // [i][0]=head, [i][1]=tail
-    private int[][] ladders;        // [i][0]=base, [i][1]=top
+    private int n;
+    private int totalCells;
+    private int[][] snakes;
+    private int[][] ladders;
     private int bfsAnswer;
     private int dijkstraAnswer;
-    private long bfsTimeMs;
-    private long dijkstraTimeMs;
+    private long bfsTimeNs;
+    private long dijkstraTimeNs;
     private String playerName;
-    private int playerAnswer;
-    private boolean correct;
+    private int playerThrows;
+    private int finalPosition;
+    private boolean completed;
     private int roundNumber;
 
-    public SnakeLadderRound() {}
+    public int getN() { return n; }
+    public void setN(int n) { this.n = n; }
 
-    // ── Getters & Setters ─────────────────────────────────────
-    public int getN()                        { return n; }
-    public void setN(int n)                  { this.n = n; }
+    public int getTotalCells() { return totalCells; }
+    public void setTotalCells(int totalCells) { this.totalCells = totalCells; }
 
-    public int getTotalCells()               { return totalCells; }
-    public void setTotalCells(int t)         { this.totalCells = t; }
+    public int[][] getSnakes() { return snakes; }
+    public void setSnakes(int[][] snakes) { this.snakes = snakes; }
 
-    public int[][] getSnakes()               { return snakes; }
-    public void setSnakes(int[][] s)         { this.snakes = s; }
+    public int[][] getLadders() { return ladders; }
+    public void setLadders(int[][] ladders) { this.ladders = ladders; }
 
-    public int[][] getLadders()              { return ladders; }
-    public void setLadders(int[][] l)        { this.ladders = l; }
+    public int getBfsAnswer() { return bfsAnswer; }
+    public void setBfsAnswer(int bfsAnswer) { this.bfsAnswer = bfsAnswer; }
 
-    public int getBfsAnswer()                { return bfsAnswer; }
-    public void setBfsAnswer(int a)          { this.bfsAnswer = a; }
+    public int getDijkstraAnswer() { return dijkstraAnswer; }
+    public void setDijkstraAnswer(int dijkstraAnswer) { this.dijkstraAnswer = dijkstraAnswer; }
 
-    public int getDijkstraAnswer()           { return dijkstraAnswer; }
-    public void setDijkstraAnswer(int a)     { this.dijkstraAnswer = a; }
+    public long getBfsTimeNs() { return bfsTimeNs; }
+    public void setBfsTimeNs(long bfsTimeNs) { this.bfsTimeNs = bfsTimeNs; }
 
-    public long getBfsTimeMs()               { return bfsTimeMs; }
-    public void setBfsTimeMs(long t)         { this.bfsTimeMs = t; }
+    public long getDijkstraTimeNs() { return dijkstraTimeNs; }
+    public void setDijkstraTimeNs(long dijkstraTimeNs) { this.dijkstraTimeNs = dijkstraTimeNs; }
 
-    public long getDijkstraTimeMs()          { return dijkstraTimeMs; }
-    public void setDijkstraTimeMs(long t)    { this.dijkstraTimeMs = t; }
+    public String getPlayerName() { return playerName; }
+    public void setPlayerName(String playerName) { this.playerName = playerName; }
 
-    public String getPlayerName()            { return playerName; }
-    public void setPlayerName(String p)      { this.playerName = p; }
+    public int getPlayerThrows() { return playerThrows; }
+    public void setPlayerThrows(int playerThrows) { this.playerThrows = playerThrows; }
 
-    public int getPlayerAnswer()             { return playerAnswer; }
-    public void setPlayerAnswer(int a)       { this.playerAnswer = a; }
+    public int getFinalPosition() { return finalPosition; }
+    public void setFinalPosition(int finalPosition) { this.finalPosition = finalPosition; }
 
-    public boolean isCorrect()               { return correct; }
-    public void setCorrect(boolean c)        { this.correct = c; }
+    public boolean isCompleted() { return completed; }
+    public void setCompleted(boolean completed) { this.completed = completed; }
 
-    public int getRoundNumber()              { return roundNumber; }
-    public void setRoundNumber(int r)        { this.roundNumber = r; }
+    public int getRoundNumber() { return roundNumber; }
+    public void setRoundNumber(int roundNumber) { this.roundNumber = roundNumber; }
 }

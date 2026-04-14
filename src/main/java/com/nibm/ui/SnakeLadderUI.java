@@ -10,7 +10,6 @@ import java.awt.*;
 
 public class SnakeLadderUI extends JDialog {
 
-    // ── Colours ───────────────────────────────────────────────
     private static final Color CLR_HEADER  = new Color(0x534AB7);
     private static final Color CLR_BG      = new Color(0xF1EFE8);
     private static final Color CLR_CARD    = new Color(0xFFFFFF);
@@ -18,38 +17,35 @@ public class SnakeLadderUI extends JDialog {
     private static final Color CLR_TEXT    = new Color(0x2C2C2A);
     private static final Color CLR_MUTED   = new Color(0x888780);
     private static final Color CLR_SUCCESS = new Color(0x1D9E75);
-    private static final Color CLR_DANGER  = new Color(0xE24B4A);
-    private static final Color CLR_DRAW    = new Color(0xBA7517);
     private static final Color CLR_SNAKE   = new Color(0xE24B4A);
     private static final Color CLR_LADDER  = new Color(0x1D9E75);
     private static final Color CLR_CELL_A  = new Color(0xEEEDFE);
     private static final Color CLR_CELL_B  = new Color(0xFFFFFF);
 
-    // ── State ─────────────────────────────────────────────────
-    private final SnakeLadderGame game   = new SnakeLadderGame();
+    private final SnakeLadderGame game = new SnakeLadderGame();
     private final SnakeLadderRepository repo = new SnakeLadderRepository();
+
     private SnakeLadderRound currentRound;
     private int roundNumber = 0;
     private String playerName;
-    private int[] currentChoices;
 
-    // ── UI Components ─────────────────────────────────────────
     private JLabel lblRound, lblN, lblCells;
     private JLabel lblBfsTime, lblDijkstraTime;
-    private BoardPanel boardPanel;
-    private JButton[] choiceButtons = new JButton[3];
-    private JButton btnNextRound;
-    private JPanel statusPanel;
+    private JLabel lblPlayerPos, lblThrows, lblLastRoll, lblOptimal;
     private JLabel lblStatus;
+    private JButton btnRoll, btnNewRound;
+    private BoardPanel boardPanel;
 
-    // ── Constructor ───────────────────────────────────────────
     public SnakeLadderUI(JFrame parent) {
         super(parent, "Game 2 — Snake and Ladder", true);
         setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         setResizable(false);
 
         playerName = askPlayerName(parent);
-        if (playerName == null) { dispose(); return; }
+        if (playerName == null) {
+            dispose();
+            return;
+        }
 
         buildUI();
         setSize(700, 800);
@@ -59,7 +55,6 @@ public class SnakeLadderUI extends JDialog {
         setVisible(true);
     }
 
-    // ── Player name with validation ───────────────────────────
     private String askPlayerName(JFrame parent) {
         while (true) {
             String name = JOptionPane.showInputDialog(
@@ -68,67 +63,39 @@ public class SnakeLadderUI extends JDialog {
             if (name == null) return null;
             name = name.trim();
             if (name.isEmpty()) {
-                showError("Name cannot be empty."); continue;
+                showError("Name cannot be empty.");
+                continue;
             }
             if (!name.matches("[a-zA-Z ]+")) {
-                showError("Name must contain letters and spaces only."); continue;
-            }
-            if (name.length() < 2) {
-                showError("Name must be at least 2 characters."); continue;
-            }
-            if (name.length() > 50) {
-                showError("Name too long. Max 50 characters."); continue;
+                showError("Name must contain letters and spaces only.");
+                continue;
             }
             return name;
         }
     }
 
-    // ── Board size input with full validation ─────────────────
     private void askBoardSize() {
         while (true) {
             String input = JOptionPane.showInputDialog(
                     this,
-                    "<html><b>Enter board size N</b> (between 6 and 12):<br><br>"
-                            + "• Board will be N×N cells<br>"
-                            + "• Number of snakes = N-2<br>"
-                            + "• Number of ladders = N-2<br>"
-                            + "• Positions are randomly generated</html>",
-                    "Board Size", JOptionPane.PLAIN_MESSAGE);
+                    "Enter board size N (6 to 12):",
+                    "Board Size",
+                    JOptionPane.PLAIN_MESSAGE);
 
-            // User cancelled
-            if (input == null) { dispose(); return; }
+            if (input == null) {
+                dispose();
+                return;
+            }
 
             input = input.trim();
-
-            // Validation 1: not empty
-            if (input.isEmpty()) {
-                showError("Board size cannot be empty. Please enter a number.");
-                continue;
-            }
-
-            // Validation 2: digits only (no decimals, no negatives)
             if (!input.matches("\\d+")) {
-                showError("Board size must be a positive whole number.\n"
-                        + "No decimals, letters, or negative signs allowed.");
+                showError("Enter a whole number between 6 and 12.");
                 continue;
             }
 
-            // Validation 3: parse
-            int n;
-            try {
-                n = Integer.parseInt(input);
-            } catch (NumberFormatException e) {
-                showError("Invalid number. Please enter a value between 6 and 12.");
-                continue;
-            }
-
-            // Validation 4: range
-            if (n < 6) {
-                showError("N is too small. Minimum value is 6.\nYou entered: " + n);
-                continue;
-            }
-            if (n > 12) {
-                showError("N is too large. Maximum value is 12.\nYou entered: " + n);
+            int n = Integer.parseInt(input);
+            if (n < 6 || n > 12) {
+                showError("Board size must be between 6 and 12.");
                 continue;
             }
 
@@ -137,7 +104,6 @@ public class SnakeLadderUI extends JDialog {
         }
     }
 
-    // ── Build UI ──────────────────────────────────────────────
     private void buildUI() {
         JPanel root = new JPanel(new BorderLayout());
         root.setBackground(CLR_BG);
@@ -146,11 +112,10 @@ public class SnakeLadderUI extends JDialog {
         JScrollPane scroll = new JScrollPane(buildBody());
         scroll.setBorder(null);
         scroll.getViewport().setBackground(CLR_BG);
-        scroll.setHorizontalScrollBarPolicy(
-                JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        scroll.setVerticalScrollBarPolicy(
-                JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        scroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         root.add(scroll, BorderLayout.CENTER);
+
         root.add(buildFooter(), BorderLayout.SOUTH);
         setContentPane(root);
     }
@@ -160,7 +125,7 @@ public class SnakeLadderUI extends JDialog {
         h.setBackground(CLR_HEADER);
         h.setBorder(new EmptyBorder(16, 24, 14, 24));
 
-        JLabel title = new JLabel("Snake and Ladder — Min Dice Throws");
+        JLabel title = new JLabel("Snake and Ladder — Play");
         title.setFont(new Font("SansSerif", Font.BOLD, 15));
         title.setForeground(Color.WHITE);
 
@@ -168,7 +133,7 @@ public class SnakeLadderUI extends JDialog {
         lblRound.setFont(new Font("SansSerif", Font.PLAIN, 12));
         lblRound.setForeground(new Color(0xAFA9EC));
 
-        h.add(title,    BorderLayout.CENTER);
+        h.add(title, BorderLayout.CENTER);
         h.add(lblRound, BorderLayout.EAST);
         return h;
     }
@@ -183,22 +148,21 @@ public class SnakeLadderUI extends JDialog {
         body.add(Box.createVerticalStrut(10));
         body.add(buildBoardCard());
         body.add(Box.createVerticalStrut(10));
-        body.add(buildTimingCard());
+        body.add(buildStatsCard());
         body.add(Box.createVerticalStrut(10));
-        body.add(buildChoiceCard());
+        body.add(buildControlCard());
         body.add(Box.createVerticalStrut(10));
-        body.add(buildStatusAndNext());
-        body.add(Box.createVerticalStrut(16));
+        body.add(buildStatusCard());
+        body.add(Box.createVerticalStrut(12));
         return body;
     }
 
-    // ── Info card ─────────────────────────────────────────────
     private JPanel buildInfoCard() {
         JPanel card = makeCard();
         card.setLayout(new GridLayout(2, 4, 8, 6));
 
-        card.add(makeLabel("Player:",     CLR_MUTED, 11));
-        card.add(makeLabel(playerName,    CLR_TEXT,  12));
+        card.add(makeLabel("Player:", CLR_MUTED, 11));
+        card.add(makeLabel(playerName, CLR_TEXT, 12));
         card.add(makeLabel("Board Size:", CLR_MUTED, 11));
 
         lblN = new JLabel("—");
@@ -212,12 +176,15 @@ public class SnakeLadderUI extends JDialog {
         lblCells.setForeground(CLR_HEADER);
         card.add(lblCells);
 
-        card.add(new JLabel(""));
-        card.add(new JLabel(""));
+        card.add(makeLabel("Optimal Throws:", CLR_MUTED, 11));
+        lblOptimal = new JLabel("—");
+        lblOptimal.setFont(new Font("SansSerif", Font.BOLD, 13));
+        lblOptimal.setForeground(CLR_SUCCESS);
+        card.add(lblOptimal);
+
         return card;
     }
 
-    // ── Board visual card ─────────────────────────────────────
     private JPanel buildBoardCard() {
         JPanel card = makeCard();
         card.setLayout(new BorderLayout());
@@ -226,123 +193,80 @@ public class SnakeLadderUI extends JDialog {
         title.setFont(new Font("SansSerif", Font.BOLD, 12));
         title.setBorder(new EmptyBorder(0, 0, 6, 0));
 
-        // Legend
-        JPanel legend = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 2));
-        legend.setOpaque(false);
-        legend.add(makeLegendItem("Snake (S = head)", CLR_SNAKE));
-        legend.add(makeLegendItem("Ladder (L = base)", CLR_LADDER));
-
         boardPanel = new BoardPanel();
         boardPanel.setPreferredSize(new Dimension(380, 300));
 
-        card.add(title,      BorderLayout.NORTH);
+        JPanel legend = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 2));
+        legend.setOpaque(false);
+        legend.add(makeLegendItem("Snake", CLR_SNAKE));
+        legend.add(makeLegendItem("Ladder", CLR_LADDER));
+        legend.add(makeLegendItem("Player", CLR_HEADER));
+
+        card.add(title, BorderLayout.NORTH);
         card.add(boardPanel, BorderLayout.CENTER);
-        card.add(legend,     BorderLayout.SOUTH);
+        card.add(legend, BorderLayout.SOUTH);
         return card;
     }
 
-    // ── Timing card ───────────────────────────────────────────
-    private JPanel buildTimingCard() {
+    private JPanel buildStatsCard() {
         JPanel card = makeCard();
-        card.setLayout(new GridLayout(3, 2, 8, 6));
+        card.setLayout(new GridLayout(3, 4, 8, 6));
 
-        card.add(makeLabel("Algorithm", CLR_MUTED, 11));
-        card.add(makeLabel("Time Taken", CLR_MUTED, 11));
+        card.add(makeLabel("Position:", CLR_MUTED, 11));
+        lblPlayerPos = new JLabel("—");
+        card.add(lblPlayerPos);
 
-        card.add(makeLabel("BFS:", CLR_TEXT, 12));
+        card.add(makeLabel("Throws Used:", CLR_MUTED, 11));
+        lblThrows = new JLabel("—");
+        card.add(lblThrows);
+
+        card.add(makeLabel("Last Roll:", CLR_MUTED, 11));
+        lblLastRoll = new JLabel("—");
+        card.add(lblLastRoll);
+
+        card.add(makeLabel("BFS Time:", CLR_MUTED, 11));
         lblBfsTime = new JLabel("—");
-        lblBfsTime.setFont(new Font("SansSerif", Font.BOLD, 12));
         lblBfsTime.setForeground(new Color(0x185FA5));
         card.add(lblBfsTime);
 
-        card.add(makeLabel("Dijkstra:", CLR_TEXT, 12));
+        card.add(makeLabel("Dijkstra Time:", CLR_MUTED, 11));
         lblDijkstraTime = new JLabel("—");
-        lblDijkstraTime.setFont(new Font("SansSerif", Font.BOLD, 12));
         lblDijkstraTime.setForeground(new Color(0xBA7517));
         card.add(lblDijkstraTime);
 
+        card.add(new JLabel(""));
+        card.add(new JLabel(""));
         return card;
     }
 
-    // ── 3-choice card ─────────────────────────────────────────
-    private JPanel buildChoiceCard() {
+    private JPanel buildControlCard() {
         JPanel card = makeCard();
-        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+        card.setLayout(new FlowLayout(FlowLayout.LEFT, 10, 4));
 
-        JLabel question = new JLabel(
-                "What is the minimum number of dice throws to reach the last cell?");
-        question.setFont(new Font("SansSerif", Font.BOLD, 12));
-        question.setForeground(CLR_TEXT);
-        question.setAlignmentX(Component.LEFT_ALIGNMENT);
+        btnRoll = makeButton("Roll Dice", CLR_HEADER, Color.WHITE);
+        btnRoll.addActionListener(e -> rollDice());
 
-        JLabel hint = new JLabel("Select one of the three options below:");
-        hint.setFont(new Font("SansSerif", Font.PLAIN, 11));
-        hint.setForeground(CLR_MUTED);
-        hint.setAlignmentX(Component.LEFT_ALIGNMENT);
+        btnNewRound = makeButton("Next Round →", CLR_BG, CLR_TEXT);
+        btnNewRound.setEnabled(false);
+        btnNewRound.addActionListener(e -> askBoardSize());
 
-        JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 4));
-        btnRow.setOpaque(false);
-        btnRow.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        for (int i = 0; i < 3; i++) {
-            final int idx = i;
-            choiceButtons[i] = new JButton("—");
-            choiceButtons[i].setFont(new Font("SansSerif", Font.BOLD, 15));
-            choiceButtons[i].setForeground(CLR_HEADER);
-            choiceButtons[i].setBackground(CLR_CELL_A);
-            choiceButtons[i].setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(CLR_HEADER, 1),
-                    new EmptyBorder(10, 28, 10, 28)
-            ));
-            choiceButtons[i].setFocusPainted(false);
-            choiceButtons[i].setCursor(
-                    Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-            choiceButtons[i].setEnabled(false);
-            choiceButtons[i].addActionListener(
-                    e -> submitChoice(currentChoices[idx]));
-            btnRow.add(choiceButtons[i]);
-        }
-
-        card.add(question);
-        card.add(Box.createVerticalStrut(4));
-        card.add(hint);
-        card.add(Box.createVerticalStrut(10));
-        card.add(btnRow);
+        card.add(btnRoll);
+        card.add(btnNewRound);
         return card;
     }
 
-    // ── Status + Next round ───────────────────────────────────
-    private JPanel buildStatusAndNext() {
-        JPanel wrapper = new JPanel();
-        wrapper.setLayout(new BoxLayout(wrapper, BoxLayout.Y_AXIS));
-        wrapper.setOpaque(false);
-        wrapper.setAlignmentX(Component.LEFT_ALIGNMENT);
+    private JPanel buildStatusCard() {
+        JPanel card = makeCard();
+        card.setLayout(new BorderLayout());
 
-        statusPanel = new JPanel(new BorderLayout());
-        statusPanel.setOpaque(false);
-        statusPanel.setVisible(false);
-        statusPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        statusPanel.setMinimumSize(new Dimension(100, 46));
-        statusPanel.setPreferredSize(new Dimension(600, 46));
-        statusPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 46));
-
-        lblStatus = new JLabel("", SwingConstants.CENTER);
+        lblStatus = new JLabel("Ready to play.", SwingConstants.CENTER);
         lblStatus.setFont(new Font("SansSerif", Font.BOLD, 13));
-        lblStatus.setBorder(new EmptyBorder(10, 16, 10, 16));
         lblStatus.setOpaque(true);
-        statusPanel.add(lblStatus, BorderLayout.CENTER);
+        lblStatus.setBackground(new Color(0xEEF2FF));
+        lblStatus.setBorder(new EmptyBorder(12, 16, 12, 16));
 
-        btnNextRound = makeButton("Next Round →", CLR_BG, CLR_MUTED);
-        btnNextRound.setEnabled(false);
-        btnNextRound.setAlignmentX(Component.LEFT_ALIGNMENT);
-        btnNextRound.setMaximumSize(new Dimension(160, 36));
-        btnNextRound.addActionListener(e -> askBoardSize());
-
-        wrapper.add(statusPanel);
-        wrapper.add(Box.createVerticalStrut(8));
-        wrapper.add(btnNextRound);
-        wrapper.add(Box.createVerticalStrut(16));
-        return wrapper;
+        card.add(lblStatus, BorderLayout.CENTER);
+        return card;
     }
 
     private JPanel buildFooter() {
@@ -355,142 +279,137 @@ public class SnakeLadderUI extends JDialog {
         return footer;
     }
 
-    // ── Start new round ───────────────────────────────────────
     private void startNewRound(int n) {
         roundNumber++;
         lblRound.setText("Round " + roundNumber);
 
-        for (JButton btn : choiceButtons) {
-            btn.setEnabled(false);
-            btn.setText("—");
-        }
-        btnNextRound.setEnabled(false);
-        statusPanel.setVisible(false);
-        lblN.setText("Computing...");
+        SwingWorker<SnakeLadderRound, Void> worker = new SwingWorker<SnakeLadderRound, Void>() {
+            @Override
+            protected SnakeLadderRound doInBackground() {
+                return game.newRound(roundNumber, n);
+            }
 
-        SwingWorker<SnakeLadderRound, Void> worker =
-                new SwingWorker<SnakeLadderRound, Void>() {
-                    protected SnakeLadderRound doInBackground() {
-                        return game.newRound(roundNumber, n);
-                    }
-                    protected void done() {
-                        try {
-                            currentRound = get();
-                            repo.saveRound(currentRound);
-                            currentChoices = game.generateChoices();
-                            updateRoundUI();
-                        } catch (Exception ex) {
-                            showError("Error starting round: "
-                                    + ex.getMessage());
-                        }
-                    }
-                };
+            @Override
+            protected void done() {
+                try {
+                    currentRound = get();
+                    repo.saveRound(currentRound);
+                    updateRoundUI();
+                } catch (Exception ex) {
+                    showError("Error starting round: " + ex.getMessage());
+                }
+            }
+        };
         worker.execute();
     }
 
     private void updateRoundUI() {
         lblN.setText(game.getN() + " × " + game.getN());
         lblCells.setText(String.valueOf(game.getTotalCells()));
-        lblBfsTime.setText(game.getBfsTimeMs() + " ms");
-        lblDijkstraTime.setText(game.getDijkstraTimeMs() + " ms");
 
-        for (int i = 0; i < 3; i++) {
-            choiceButtons[i].setText(String.valueOf(currentChoices[i]));
-            choiceButtons[i].setEnabled(true);
-        }
+        // hide until game ends
+        lblOptimal.setText("—");
+        lblBfsTime.setText("—");
+        lblDijkstraTime.setText("—");
+
+        lblPlayerPos.setText(String.valueOf(game.getPlayerPosition()));
+        lblThrows.setText(String.valueOf(game.getPlayerThrows()));
+        lblLastRoll.setText("-");
+        lblStatus.setText(game.getLastMoveMessage());
+        lblStatus.setBackground(new Color(0xEEF2FF));
+
+        btnRoll.setEnabled(true);
+        btnNewRound.setEnabled(false);
 
         boardPanel.setBoard(
-                game.getN(), game.getBoard(),
-                game.getSnakes(), game.getLadders());
+                game.getN(),
+                game.getBoard(),
+                game.getSnakes(),
+                game.getLadders(),
+                game.getPlayerPosition()
+        );
         boardPanel.repaint();
     }
 
-    // ── Submit choice — WIN / DRAW / LOSE ────────────────────
-    private void submitChoice(int chosen) {
-        // Disable all buttons after selection
-        for (JButton btn : choiceButtons) btn.setEnabled(false);
+    private void rollDice() {
+        game.rollDice();
 
-        String result = game.classifyAnswer(chosen);
+        lblPlayerPos.setText(String.valueOf(game.getPlayerPosition()));
+        lblThrows.setText(String.valueOf(game.getPlayerThrows()));
+        lblLastRoll.setText(String.valueOf(game.getLastRoll()));
+        lblStatus.setText(game.getLastMoveMessage());
+        lblStatus.setBackground(new Color(0xEEF2FF));
 
-        currentRound.setPlayerName(playerName);
-        currentRound.setPlayerAnswer(chosen);
+        boardPanel.setBoard(
+                game.getN(),
+                game.getBoard(),
+                game.getSnakes(),
+                game.getLadders(),
+                game.getPlayerPosition()
+        );
+        boardPanel.repaint();
 
-        switch (result) {
-            case "WIN":
-                currentRound.setCorrect(true);
-                showStatus(
-                        "Correct! Minimum throws = " + chosen, CLR_SUCCESS);
-                repo.savePlayerResult(playerName, chosen, roundNumber);
-                showWinDialog(chosen);
-                break;
+        if (game.isGameOver()) {
+            btnRoll.setEnabled(false);
+            btnNewRound.setEnabled(true);
 
-            case "DRAW":
-                currentRound.setCorrect(false);
-                showStatus(
-                        "So close! Correct answer was "
-                                + game.getCorrectAnswer()
-                                + ", you chose " + chosen,
-                        CLR_DRAW);
-                showDrawDialog(chosen, game.getCorrectAnswer());
-                break;
+            // show only after finish
+            lblOptimal.setText(String.valueOf(game.getCorrectAnswer()));
+            lblBfsTime.setText(game.getBfsTimeNs() + " ns");
+            lblDijkstraTime.setText(game.getDijkstraTimeNs() + " ns");
 
-            case "LOSE":
-            default:
-                currentRound.setCorrect(false);
-                showStatus(
-                        "Wrong! Correct answer was "
-                                + game.getCorrectAnswer(),
-                        CLR_DANGER);
-                showLoseDialog(game.getCorrectAnswer(), chosen);
-                break;
+            currentRound.setPlayerName(playerName);
+            currentRound.setPlayerThrows(game.getPlayerThrows());
+            currentRound.setFinalPosition(game.getPlayerPosition());
+            currentRound.setCompleted(true);
+
+            repo.savePlayerResult(
+                    playerName,
+                    game.getPlayerThrows(),
+                    game.getPlayerPosition(),
+                    roundNumber
+            );
+
+            showFinishDialog();
+        }
+    }
+
+    private void showFinishDialog() {
+        String performance;
+        if (game.getPlayerThrows() == game.getCorrectAnswer()) {
+            performance = "Perfect! You matched the optimal answer.";
+        } else if (game.getPlayerThrows() <= game.getCorrectAnswer() + 2) {
+            performance = "Nice! You were close to the optimal answer.";
+        } else {
+            performance = "You finished, but used more throws than the optimal path.";
         }
 
-        btnNextRound.setEnabled(true);
-    }
-
-    // ── Result dialogs ────────────────────────────────────────
-    private void showWinDialog(int answer) {
         JOptionPane.showMessageDialog(this,
-                "<html><b>You got it right!</b><br><br>"
-                        + "Minimum dice throws: <b>" + answer + "</b><br>"
-                        + "BFS time:      " + game.getBfsTimeMs()      + " ms<br>"
-                        + "Dijkstra time: " + game.getDijkstraTimeMs() + " ms<br><br>"
-                        + "Your answer has been saved to the database.</html>",
-                "You Win!", JOptionPane.INFORMATION_MESSAGE);
+                "<html><b>Round Complete!</b><br><br>"
+                        + "Your Throws: <b>" + game.getPlayerThrows() + "</b><br>"
+                        + "Optimal Throws (BFS): <b>" + game.getCorrectAnswer() + "</b><br>"
+                        + "Dijkstra Result: <b>" + game.getDijkstraAnswer() + "</b><br><br>"
+                        + "BFS Time: " + game.getBfsTimeNs() + " ns<br>"
+                        + "Dijkstra Time: " + game.getDijkstraTimeNs() + " ns<br><br>"
+                        + performance + "</html>",
+                "Game Complete",
+                JOptionPane.INFORMATION_MESSAGE);
     }
 
-    private void showDrawDialog(int chosen, int correct) {
-        JOptionPane.showMessageDialog(this,
-                "<html><b>Almost!</b><br><br>"
-                        + "Your answer: <b>" + chosen + "</b><br>"
-                        + "Correct answer: <b>" + correct + "</b><br><br>"
-                        + "You were only 1 throw away — so close!</html>",
-                "Draw", JOptionPane.WARNING_MESSAGE);
-    }
-
-    private void showLoseDialog(int correct, int chosen) {
-        JOptionPane.showMessageDialog(this,
-                "<html><b>Wrong answer!</b><br><br>"
-                        + "You chose: <b>" + chosen + "</b><br>"
-                        + "Correct answer: <b>" + correct + "</b><br><br>"
-                        + "Better luck next round!</html>",
-                "You Lose", JOptionPane.ERROR_MESSAGE);
-    }
-
-    // ── Board drawing panel ───────────────────────────────────
     private class BoardPanel extends JPanel {
 
         private int n;
         private int[] board;
         private int[][] snakes;
         private int[][] ladders;
+        private int playerPosition;
 
-        public void setBoard(int n, int[] board,
-                             int[][] snakes, int[][] ladders) {
-            this.n       = n;
-            this.board   = board;
-            this.snakes  = snakes;
+        public void setBoard(int n, int[] board, int[][] snakes, int[][] ladders, int playerPosition) {
+            this.n = n;
+            this.board = board;
+            this.snakes = snakes;
             this.ladders = ladders;
+            this.playerPosition = playerPosition;
         }
 
         @Override
@@ -502,61 +421,50 @@ public class SnakeLadderUI extends JDialog {
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
                     RenderingHints.VALUE_ANTIALIAS_ON);
 
-            int w     = getWidth();
-            int h     = getHeight();
+            int w = getWidth();
+            int h = getHeight();
             int cellW = w / n;
             int cellH = h / n;
 
-            // ── Draw cells ────────────────────────────────────
             for (int row = 0; row < n; row++) {
                 for (int col = 0; col < n; col++) {
                     int cellNum = getCellNumber(row, col);
                     int x = col * cellW;
                     int y = row * cellH;
 
-                    g2.setColor((row + col) % 2 == 0
-                            ? CLR_CELL_A : CLR_CELL_B);
+                    g2.setColor((row + col) % 2 == 0 ? CLR_CELL_A : CLR_CELL_B);
                     g2.fillRect(x, y, cellW, cellH);
                     g2.setColor(CLR_BORDER);
                     g2.drawRect(x, y, cellW, cellH);
 
-                    // Cell number
                     g2.setColor(CLR_MUTED);
                     g2.setFont(new Font("SansSerif", Font.PLAIN, 9));
-                    g2.drawString(String.valueOf(cellNum),
-                            x + 2, y + cellH - 3);
+                    g2.drawString(String.valueOf(cellNum), x + 2, y + cellH - 3);
                 }
             }
 
-            // ── Draw snakes (red lines, S at head) ────────────
-            g2.setStroke(new BasicStroke(2.5f,
-                    BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            g2.setStroke(new BasicStroke(2.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+
             for (int[] snake : snakes) {
                 Point head = getCellCenter(snake[0], cellW, cellH);
                 Point tail = getCellCenter(snake[1], cellW, cellH);
                 g2.setColor(CLR_SNAKE);
                 g2.drawLine(head.x, head.y, tail.x, tail.y);
-                g2.fillOval(head.x - 5, head.y - 5, 10, 10);
-                g2.setFont(new Font("SansSerif", Font.BOLD, 9));
-                g2.drawString("S", head.x + 7, head.y - 3);
             }
 
-            // ── Draw ladders (green lines, L at base) ─────────
             for (int[] ladder : ladders) {
                 Point base = getCellCenter(ladder[0], cellW, cellH);
-                Point top  = getCellCenter(ladder[1], cellW, cellH);
+                Point top = getCellCenter(ladder[1], cellW, cellH);
                 g2.setColor(CLR_LADDER);
                 g2.drawLine(base.x, base.y, top.x, top.y);
-                g2.fillOval(base.x - 5, base.y - 5, 10, 10);
-                g2.setFont(new Font("SansSerif", Font.BOLD, 9));
-                g2.drawString("L", base.x + 7, base.y - 3);
             }
 
-            g2.setStroke(new BasicStroke(1f));
+            Point player = getCellCenter(playerPosition, cellW, cellH);
+            g2.setColor(CLR_HEADER);
+            g2.fillOval(player.x - 8, player.y - 8, 16, 16);
 
-            // ── Highlight START and END cells ─────────────────
             Point start = getCellCenter(1, cellW, cellH);
-            Point end   = getCellCenter(n * n, cellW, cellH);
+            Point end = getCellCenter(n * n, cellW, cellH);
 
             g2.setFont(new Font("SansSerif", Font.BOLD, 9));
             g2.setColor(CLR_SUCCESS);
@@ -566,20 +474,15 @@ public class SnakeLadderUI extends JDialog {
             g2.drawString("END", end.x - 10, end.y + 4);
         }
 
-        // ── Cell center pixel from cell number ────────────────
-        // Uses zigzag (boustrophedon) numbering:
-        // Bottom-left = 1, zigzag upward
         private Point getCellCenter(int cellNum, int cellW, int cellH) {
-            int idx      = cellNum - 1;       // 0-based
-            int boardRow = idx / n;           // 0 = bottom row
+            int idx = cellNum - 1;
+            int boardRow = idx / n;
             int boardCol = idx % n;
 
-            // Odd rows go right-to-left
             if (boardRow % 2 == 1) {
                 boardCol = n - 1 - boardCol;
             }
 
-            // Screen row: row 0 on screen = top = highest boardRow
             int screenRow = n - 1 - boardRow;
             int screenCol = boardCol;
 
@@ -589,7 +492,6 @@ public class SnakeLadderUI extends JDialog {
             );
         }
 
-        // ── Cell number from screen row/col ───────────────────
         private int getCellNumber(int screenRow, int screenCol) {
             int boardRow = n - 1 - screenRow;
             int col = (boardRow % 2 == 0)
@@ -599,7 +501,6 @@ public class SnakeLadderUI extends JDialog {
         }
     }
 
-    // ── UI helpers ────────────────────────────────────────────
     private JPanel makeLegendItem(String label, Color color) {
         JPanel item = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
         item.setOpaque(false);
@@ -642,19 +543,6 @@ public class SnakeLadderUI extends JDialog {
         btn.setFocusPainted(false);
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         return btn;
-    }
-
-    private void showStatus(String message, Color color) {
-        lblStatus.setText(message);
-        if (color.equals(CLR_SUCCESS)) {
-            lblStatus.setBackground(new Color(0xE1F5EE));
-        } else if (color.equals(CLR_DANGER)) {
-            lblStatus.setBackground(new Color(0xFCEBEB));
-        } else {
-            lblStatus.setBackground(new Color(0xFAEEDA)); // draw
-        }
-        lblStatus.setForeground(color);
-        statusPanel.setVisible(true);
     }
 
     private void showError(String msg) {
