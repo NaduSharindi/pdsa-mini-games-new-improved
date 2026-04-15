@@ -35,7 +35,7 @@ public class MainMenu extends JFrame {
             { "2", "Snake and Ladder",   "BFS & Dijkstra · Min dice throws"            },
             { "3", "Traffic Simulation", "Ford-Fulkerson & Edmonds-Karp · Max flow"    },
             { "4", "Knight's Tour",      "Warnsdorff & Backtracking · Chess moves"     },
-            { "5", "Sixteen Queens",     "Sequential & Threaded · N-Queens puzzle"     },
+            { "5", "Eighteen Queens",     "Sequential & Threaded · N-Queens puzzle"     },
     };
 
     // ── Constructor ───────────────────────────────────────────

@@ -51,7 +51,7 @@ public class QueensUI extends JDialog {
 
     // ── Constructor ───────────────────────────────────────────
     public QueensUI(JFrame parent) {
-        super(parent, "Game 5 — Sixteen Queens Puzzle", true);
+        super(parent, "Game 5 — Eighteen Queens Puzzle", true);
         setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         setResizable(false);
 
@@ -153,7 +153,7 @@ public class QueensUI extends JDialog {
         h.setBorder(new EmptyBorder(16, 24, 14, 24));
 
         JLabel title = new JLabel(
-                "Sixteen Queens Puzzle — 8×8 Board");
+                "Eighteen Queens Puzzle — 8×8 Board");
         title.setFont(new Font("SansSerif", Font.BOLD, 15));
         title.setForeground(Color.WHITE);
 
